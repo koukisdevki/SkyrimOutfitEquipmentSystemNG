@@ -8,6 +8,15 @@
 #include "outfit.pb.h"
 
 namespace RE {
+    class ActorWeightModel;
+
+    namespace BIPED_OBJECTS_META {
+        inline constexpr std::uint32_t kFirstSlot = RE::BIPED_OBJECTS::kHead;
+        inline constexpr std::uint32_t kNumSlots = RE::BIPED_OBJECTS::kEditorTotal;
+    }// namespace BIPED_OBJECTS_META
+}// namespace RE
+
+namespace RE {
     class TESObjectARMO;
 }
 

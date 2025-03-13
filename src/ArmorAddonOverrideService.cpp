@@ -1,6 +1,9 @@
 #include "ArmorAddonOverrideService.h"
 
-#include "RE/REAugments.h"
+#ifndef SKYRIMOUTFITSYSTEMSE_INCLUDE_RE_REAUGMENTS_H
+#define SKYRIMOUTFITSYSTEMSE_INCLUDE_RE_REAUGMENTS_H
+
+#endif//SKYRIMOUTFITSYSTEMSE_INCLUDE_RE_REAUGMENTS_H
 
 void _assertWrite(bool result, const char* err) {
     if (!result)

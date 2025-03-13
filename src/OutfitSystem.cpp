@@ -4,7 +4,6 @@
 
 #include "ArmorAddonOverrideService.h"
 
-#include "RE/REAugments.h"
 #include "cobb/strings.h"
 #include "cobb/utf8naturalsort.h"
 #include "cobb/utf8string.h"
@@ -32,52 +31,35 @@ namespace OutfitSystem {
         LogExit exitPrint("GetOutfitNameMaxLength"sv);
         return ArmorAddonOverrideService::ce_outfitNameMaxLength;
     }
-    std::vector<RE::TESObjectARMO*> GetCarriedArmor(RE::BSScript::IVirtualMachine* registry,
-                                                    std::uint32_t stackId,
-                                                    RE::StaticFunctionTag*,
-                                                    RE::Actor* target) {
+    std::vector<RE::TESObjectARMO*> GetCarriedArmor(
+        RE::BSScript::IVirtualMachine* registry,
+        std::uint32_t stackId,
+        RE::StaticFunctionTag*,
+        RE::Actor* target) {
         LogExit exitPrint("GetCarriedArmor"sv);
         std::vector<RE::TESObjectARMO*> result;
+
         if (target == nullptr) {
             registry->TraceStack("Cannot retrieve data for a None RE::Actor.",
                                  stackId,
                                  RE::BSScript::IVirtualMachine::Severity::kError);
-            std::vector<RE::TESObjectARMO*> empty;
-            return empty;
+            return result;
         }
-        //
-        class _Visitor: public RE::IItemChangeVisitorAugment {
-            //
-            // If the player has a shield equipped, and if we're not overriding that
-            // shield, then we need to grab the equipped shield's worn-flags.
-            //
-        public:
-            virtual VisitorReturn Visit(RE::InventoryEntryData* data) override {
-                // Return true to continue, or else false to break.
-                const auto form = data->object;
-                if (form && form->formType == RE::FormType::Armor) {
-                    auto armor = skyrim_cast<RE::TESObjectARMO*>(form);
-                    if (armor) this->list.push_back(armor);
-                }
-                return VisitorReturn::kContinue;
-            };
 
-            std::vector<RE::TESObjectARMO*>& list;
-            //
-            _Visitor(std::vector<RE::TESObjectARMO*>& l) : list(l){};
-        };
-        auto inventory = target->GetInventoryChanges();
-        if (inventory) {
-            _Visitor visitor(result);
-            RE::InventoryChangesAugments::ExecuteAugmentVisitorOnWorn(inventory, &visitor);
+        // Use GetInventory() which returns a safely iterable container
+        auto inventory = target->GetInventory();
+        for (const auto& [item, data] : inventory) {
+            if (item && item->Is(RE::FormType::Armor)) {
+                auto armor = item->As<RE::TESObjectARMO>();
+                if (armor && data.first > 0) {  // Check if the item count is > 0
+                    result.push_back(armor);
+                }
+            }
         }
-        std::vector<RE::TESObjectARMO*> converted_result;
-        converted_result.reserve(result.size());
-        for (const auto ptr : result) {
-            converted_result.push_back((RE::TESObjectARMO*) ptr);
-        }
-        return converted_result;
+
+        return result;
     }
+
     std::vector<RE::TESObjectARMO*> GetWornItems(
         RE::BSScript::IVirtualMachine* registry,
         std::uint32_t stackId,
@@ -85,88 +67,195 @@ namespace OutfitSystem {
         RE::Actor* target) {
         LogExit exitPrint("GetWornItems"sv);
         std::vector<RE::TESObjectARMO*> result;
+
         if (target == nullptr) {
             registry->TraceStack("Cannot retrieve data for a None RE::Actor.", stackId, RE::BSScript::IVirtualMachine::Severity::kError);
-            std::vector<RE::TESObjectARMO*> empty;
-            return empty;
+            return result;
         }
-        //
-        class _Visitor: public RE::IItemChangeVisitorAugment {
-            //
-            // If the player has a shield equipped, and if we're not overriding that
-            // shield, then we need to grab the equipped shield's worn-flags.
-            //
-        public:
-            virtual VisitorReturn Visit(RE::InventoryEntryData* data) override {
-                auto form = data->object;
-                if (form && form->formType == RE::FormType::Armor) {
-                    auto armor = skyrim_cast<RE::TESObjectARMO*>(form);
-                    if (armor) this->list.push_back(armor);
-                }
-                return VisitorReturn::kContinue;
-            };
 
-            std::vector<RE::TESObjectARMO*>& list;
-            //
-            _Visitor(std::vector<RE::TESObjectARMO*>& l) : list(l){};
-        };
-        auto inventory = target->GetInventoryChanges();
-        if (inventory) {
-            _Visitor visitor(result);
-            RE::InventoryChangesAugments::ExecuteAugmentVisitorOnWorn(inventory, &visitor);
+        // Get inventory using GetInventory() which returns a safely iterable container
+        auto inventory = target->GetInventory();
+        for (const auto& [item, data] : inventory) {
+            if (item && item->Is(RE::FormType::Armor)) {
+                auto armor = item->As<RE::TESObjectARMO>();
+                if (armor && data.second && data.second->IsWorn()) {
+                    result.push_back(armor);
+                }
+            }
         }
-        std::vector<RE::TESObjectARMO*> converted_result;
-        converted_result.reserve(result.size());
-        for (const auto ptr : result) {
-            converted_result.push_back((RE::TESObjectARMO*) ptr);
-        }
-        return converted_result;
+
+        return result;
     }
+
     void RefreshArmorFor(RE::BSScript::IVirtualMachine* registry,
                          std::uint32_t stackId,
                          RE::StaticFunctionTag*,
                          RE::Actor* target) {
         LogExit exitPrint("RefreshArmorFor"sv);
         ERROR_AND_RETURN_IF(target == nullptr, "Cannot refresh armor on a None RE::Actor.", registry, stackId);
-        auto pm = target->GetActorRuntimeData().currentProcess;
-        if (pm) {
-            //
-            // "SetEquipFlag" tells the process manager that the RE::Actor's
-            // equipment has changed, and that their ArmorAddons should
-            // be updated. If you need to find it in Skyrim Special, you
-            // should see a call near the start of EquipManager's func-
-            // tion to equip an item.
-            //
-            // NOTE: AIProcess is also called as RE::ActorProcessManager
-            RE::AIProcessAugments::SetEquipFlag(pm, RE::AIProcessAugments::Flag::kUnk01);
-            RE::AIProcessAugments::UpdateEquipment(pm, target);
+
+        auto& svc = ArmorAddonOverrideService::GetInstance();
+        auto& outfit = svc.currentOutfit(target->GetHandle().native_handle());
+
+        bool isPlayerCharacter = (target == RE::PlayerCharacter::GetSingleton());
+        bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
+
+        // Get the ActorEquipManager for equipment operations
+        auto equipManager = RE::ActorEquipManager::GetSingleton();
+        if (!equipManager) {
+            LOG(critical,"Failed to get ActorEquipManager singleton");
+            return;
         }
+
+        // Get currently equipped items
+        std::unordered_set<RE::TESObjectARMO*> equippedItems;
+        auto inv = target->GetInventory();
+        for (const auto& [item, data] : inv) {
+            if (item && item->Is(RE::FormType::Armor)) {
+                auto armor = item->As<RE::TESObjectARMO>();
+                if (armor && data.second && data.second->IsWorn()) {
+                    equippedItems.insert(armor);
+                }
+            }
+        }
+
+        // Compute what should be displayed based on outfit settings
+        auto displayItems = outfit.computeDisplaySet(equippedItems);
+
+        // Unequip items that shouldn't be displayed
+        for (auto armor : equippedItems) {
+            if (displayItems.find(armor) == displayItems.end()) {
+                // This armor should be unequipped
+                // Get the appropriate slot for this armor
+                auto* equipSlot = armor->GetEquipSlot();
+
+                // Use ActorEquipManager to unequip
+                equipManager->UnequipObject(target, armor, nullptr, 1, equipSlot, false, forceEquip, true, true, nullptr);
+                LOG(info,"Unequipped {} from {}", armor->GetName(), target->GetName());
+            }
+        }
+
+        // Equip items that should be displayed
+        for (auto armor : displayItems) {
+            if (equippedItems.find(armor) == equippedItems.end()) {
+                // This armor should be equipped
+
+                // Check if the actor has the item in inventory
+                bool hasItem = false;
+                for (const auto& [item, data] : inv) {
+                    if (item == armor && data.first > 0) {
+                        hasItem = true;
+                        break;
+                    }
+                }
+
+                // If not in inventory, add it
+                if (!hasItem) {
+                    target->AddObjectToContainer(armor, nullptr, 1, nullptr);
+                    LOG(info,"Added {} to {}'s inventory", armor->GetName(), target->GetName());
+                }
+
+                // Get the appropriate slot for this armor
+                auto* equipSlot = armor->GetEquipSlot();
+
+                // Use ActorEquipManager to equip
+                equipManager->EquipObject(target, armor, nullptr, 1, equipSlot, false, forceEquip, true, true);
+                LOG(info,"Equipped {} on {}", armor->GetName(), target->GetName());
+            }
+        }
+
+        LOG(info,"Updated outfit for actor {}, ID: {}", target->GetName(), target->GetFormID());
+        LOG(info,"Items equipped: {}", equippedItems.size());
+        LOG(info,"Items displayed per outfit: {}", displayItems.size());
     }
+
     void RefreshArmorForAllConfiguredActors(RE::BSScript::IVirtualMachine* registry,
                                             std::uint32_t stackId,
                                             RE::StaticFunctionTag*) {
         LogExit exitPrint("RefreshArmorForAllConfiguredActors"sv);
+
+        // Get the ActorEquipManager for equipment operations
+        auto equipManager = RE::ActorEquipManager::GetSingleton();
+        if (!equipManager) {
+            LOG(critical,"Failed to get ActorEquipManager singleton");
+            return;
+        }
+
         auto& service = ArmorAddonOverrideService::GetInstance();
         auto actors = service.listActors();
+
         for (auto& actorRef : actors) {
             auto actor = RE::Actor::LookupByHandle(actorRef);
+            bool isPlayerCharacter = (actor.get() == RE::PlayerCharacter::GetSingleton());
+            bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
+
             if (!actor)
                 continue;
-            auto pm = actor->GetActorRuntimeData().currentProcess;
-            if (pm) {
-                //
-                // "SetEquipFlag" tells the process manager that the RE::Actor's
-                // equipment has changed, and that their ArmorAddons should
-                // be updated. If you need to find it in Skyrim Special, you
-                // should see a call near the start of EquipManager's func-
-                // tion to equip an item.
-                //
-                // NOTE: AIProcess is also called as RE::ActorProcessManager
-                RE::AIProcessAugments::SetEquipFlag(pm, RE::AIProcessAugments::Flag::kUnk01);
-                RE::AIProcessAugments::UpdateEquipment(pm, actor.get());
+
+            auto& svc = ArmorAddonOverrideService::GetInstance();
+            auto& outfit = svc.currentOutfit(actor->GetHandle().native_handle());
+
+            // Get currently equipped items
+            std::unordered_set<RE::TESObjectARMO*> equippedItems;
+            auto inv = actor->GetInventory();
+            for (const auto& [item, data] : inv) {
+                if (item && item->Is(RE::FormType::Armor)) {
+                    auto armor = item->As<RE::TESObjectARMO>();
+                    if (armor && data.second && data.second->IsWorn()) {
+                        equippedItems.insert(armor);
+                    }
+                }
             }
+
+            // Compute what should be displayed based on outfit settings
+            auto displayItems = outfit.computeDisplaySet(equippedItems);
+
+            // Unequip items that shouldn't be displayed
+            for (auto armor : equippedItems) {
+                if (displayItems.find(armor) == displayItems.end()) {
+                    // This armor should be unequipped
+                    // Get the appropriate slot for this armor
+                    auto* equipSlot = armor->GetEquipSlot();
+
+                    // Use ActorEquipManager to unequip
+                    equipManager->UnequipObject(actor.get(), armor, nullptr, 1, equipSlot, false, forceEquip, true, true, nullptr);
+                    LOG(info,"Unequipped {} from {}", armor->GetName(), actor->GetName());
+                }
+            }
+
+            // Equip items that should be displayed
+            for (auto armor : displayItems) {
+                if (equippedItems.find(armor) == equippedItems.end()) {
+                    // This armor should be equipped
+
+                    // Check if the actor has the item in inventory
+                    bool hasItem = false;
+                    for (const auto& [item, data] : inv) {
+                        if (item == armor && data.first > 0) {
+                            hasItem = true;
+                            break;
+                        }
+                    }
+
+                    // If not in inventory, add it
+                    if (!hasItem) {
+                        actor->AddObjectToContainer(armor, nullptr, 1, nullptr);
+                        LOG(info,"Added {} to {}'s inventory", armor->GetName(), actor->GetName());
+                    }
+
+                    // Get the appropriate slot for this armor
+                    auto* equipSlot = armor->GetEquipSlot();
+
+                    // Use ActorEquipManager to equip
+                    equipManager->EquipObject(actor.get(), armor, nullptr, 1, equipSlot, false, forceEquip, true, true);
+                    LOG(info,"Equipped {} on {}", armor->GetName(), actor->GetName());
+                }
+            }
+
+            LOG(info,"Updated outfit for actor {}, ID: {}", actor->GetName(), actor->GetFormID());
         }
     }
+
 
     std::vector<RE::Actor*> ActorsNearPC(RE::BSScript::IVirtualMachine* registry,
                                          std::uint32_t stackId,

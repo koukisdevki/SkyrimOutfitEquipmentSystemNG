@@ -3,7 +3,6 @@
 
 #include "ArmorAddonOverrideService.h"
 #include "Utility.h"
-#include "hooking/Hooks.hpp"
 
 using namespace RE::BSScript;
 using namespace SKSE;
@@ -180,17 +179,6 @@ SKSEPluginLoad(const LoadInterface* a_skse) {
         LOG(critical, "Serialization interface too old.");
         return false;
     }
-
-    // Create Trampolines
-    SKSE::AllocTrampoline(128, true);
-    Hooking::g_branchTrampoline = &SKSE::GetTrampoline();
-
-    Hooking::g_localTrampoline = new SKSE::Trampoline("local");
-    Hooking::g_localTrampoline->create(1024 * 64);
-
-    //  Actual plugin load
-    LOG(info, "Patching player skinning");
-    REL::Relocate(HookingPREAE::ApplyPlayerSkinningHooks, HookingAE::ApplyPlayerSkinningHooks)();
 
     // Messaging Callback
     LOG(info, "Registering messaging callback");

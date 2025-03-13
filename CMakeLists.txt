@@ -37,22 +37,15 @@ set(headers
         include/cobb/utf8string.h
         include/ArmorAddonOverrideService.h
         include/OutfitSystem.h
-        include/PlayerSkinning.h
-        include/RE/REAugments.h
 )
 
 set(sources
         src/Main.cpp
-        src/main.cpp
         src/cobb/utf8naturalsort.cpp
         src/cobb/utf8string.cpp
         src/ArmorAddonOverrideService.cpp
         src/OutfitSystem.cpp
-        src/hooking/Hooks_AE.cpp
-        src/hooking/Hooks_PRE_AE.cpp
-        src/hooking/Patches.cpp
         src/Utility.cpp
-        src/RE/REAugments.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
 
 source_group(
