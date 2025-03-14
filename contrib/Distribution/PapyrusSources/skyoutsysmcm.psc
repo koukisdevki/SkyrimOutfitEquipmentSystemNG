@@ -18,7 +18,6 @@ Armor[]  _kOutfitSlotArmors
 Armor[]  _kOutfitContents
 
 Bool     _sOutfitShowingSlotEditor = False
-String[] _kOutfitSlotPolicyNames
 
 String[] _sOutfitEditor_AddCandidates
 Armor[]  _kOutfitEditor_AddCandidates
@@ -51,6 +50,7 @@ Event OnConfigOpen()
    RefreshCache()
 EndEvent
 Event OnConfigClose()
+   SkyrimOutfitSystemNativeFuncs.SetOutfitsUsingLocation(Game.GetPlayer().GetCurrentLocation(), Weather.GetCurrentWeather())
    SkyrimOutfitSystemNativeFuncs.RefreshArmorForAllConfiguredActors()
    ResetOutfitBrowser()
    ResetOutfitEditor()
@@ -188,16 +188,6 @@ EndFunction
          SetMenuDialogDefaultIndex(0)
          Return
       EndIf
-      If StringUtil.Substring(sState, 0, 28) == "OutfitEditor_BodySlotPolicy_"
-         Int iEntryIndex = (StringUtil.Substring(sState, 28) as Int)
-         String[] sMenuOptions = SkyrimOutfitSystemNativeFuncs.GetAvailablePolicyNames()
-         String[] sMenu = PrependStringToArray(sMenuOptions, "$SkyOutSys_Desc_PolicyName_INHERIT")
-         sMenu = PrependStringToArray(sMenu, "$SkyOutSys_AutoswitchEdit_Cancel")
-         SetMenuDialogOptions(sMenu)
-         SetMenuDialogStartIndex(0)
-         SetMenuDialogDefaultIndex(0)
-         Return
-      EndIf
    EndEvent
    Event OnMenuAcceptST(Int aiIndex)
       String sState = GetState()
@@ -215,21 +205,6 @@ EndFunction
             SkyrimOutfitSystemNativeFuncs.SetLocationOutfit(_aCurrentActor, iAutoswitchIndex, sOutfitName)
             SetMenuOptionValueST(SkyrimOutfitSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, iAutoswitchIndex))
          EndIf
-         Return
-      EndIf
-      If StringUtil.Substring(sState, 0, 28) == "OutfitEditor_BodySlotPolicy_"
-         Int iEntryIndex = (StringUtil.Substring(sState, 28) as Int)
-         aiIndex = aiIndex - 2
-         If aiIndex == -2 ; user canceled
-            Return
-         EndIf
-         String[] sCodes = SkyrimOutfitSystemNativeFuncs.GetAvailablePolicyCodes()
-         If aiIndex != -1
-            SkyrimOutfitSystemNativeFuncs.SetBodySlotPoliciesForOutfit(_sEditingOutfit, iEntryIndex, sCodes[aiIndex])
-         Else
-            SkyrimOutfitSystemNativeFuncs.SetBodySlotPoliciesForOutfit(_sEditingOutfit, iEntryIndex, "")
-         EndIf
-         ForcePageReset()
          Return
       EndIf
    EndEvent
@@ -297,23 +272,20 @@ EndFunction
       ;/EndBlock/;
       ;/Block/; ; Right column
          SetCursorPosition(1)
-         If _aCurrentActor == Game.GetPlayer()
-            AddHeaderOption("$SkyOutSys_MCMHeader_Autoswitch")
-            Int[] iIndices = SkyrimOutfitSystemNativeFuncs.GetAutoSwitchLocationArray()
-            Int iCount = iIndices.Length
-            AddToggleOptionST("OPT_AutoswitchEnabled", "$SkyOutSys_Text_EnableAutoswitch", SkyrimOutfitSystemNativeFuncs.GetLocationBasedAutoSwitchEnabled())
-            If SkyrimOutfitSystemNativeFuncs.GetLocationBasedAutoSwitchEnabled()
-               Int iIterator = 0
-               While iIterator < iCount
-                  String sLocationOutfit = SkyrimOutfitSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, iIndices[iIterator])
-                  If sLocationOutfit == ""
-                     sLocationOutfit = "$SkyOutSys_AutoswitchEdit_None"
-                  EndIf
-                  AddMenuOptionST("OPT_AutoswitchEntry" + iIndices[iIterator], "$SkyOutSys_Text_Autoswitch" + iIndices[iIterator], sLocationOutfit)
-                  iIterator = iIterator + 1
-               EndWhile
+
+         AddHeaderOption("$SkyOutSys_MCMHeader_Autoswitch")
+         Int[] iIndices = SkyrimOutfitSystemNativeFuncs.GetAutoSwitchLocationArray()
+         Int iCount = iIndices.Length
+
+         Int iIterator = 0
+         While iIterator < iCount
+            String sLocationOutfit = SkyrimOutfitSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, iIndices[iIterator])
+            If sLocationOutfit == ""
+               sLocationOutfit = "$SkyOutSys_AutoswitchEdit_None"
             EndIf
-         EndIf
+            AddMenuOptionST("OPT_AutoswitchEntry" + iIndices[iIterator], "$SkyOutSys_Text_Autoswitch" + iIndices[iIterator], sLocationOutfit)
+            iIterator = iIterator + 1
+         EndWhile
       ;/EndBlock/;
 
    EndFunction
@@ -357,7 +329,10 @@ EndFunction
          String[] kActorNames = Utility.CreateStringArray(_kActorSelection_SelectCandidates.Length)
          Int iIterator = 0
          While iIterator < _kActorSelection_SelectCandidates.Length
-            kActorNames[iIterator] = _kActorSelection_SelectCandidates[iIterator].GetActorBase().GetName()
+            If _kActorSelection_SelectCandidates[iIterator] != Game.GetPlayer()
+               String CurrActorName = _kActorSelection_SelectCandidates[iIterator].GetActorBase().GetName()
+               kActorNames[iIterator] = CurrActorName
+            Endif
             iIterator = iIterator + 1
          EndWhile
          String[] sMenu = PrependStringToArray(kActorNames, "$SkyOutSys_OEdit_AddCancel")
@@ -419,16 +394,7 @@ EndFunction
          SetInfoText("$SkyOutSys_Desc_EnableQuickslots")
       EndEvent
    EndState
-   State OPT_AutoswitchEnabled
-      Event OnSelectST()
-         SkyrimOutfitSystemNativeFuncs.SetLocationBasedAutoSwitchEnabled(!SkyrimOutfitSystemNativeFuncs.GetLocationBasedAutoSwitchEnabled())
-         SetToggleOptionValueST(SkyrimOutfitSystemNativeFuncs.GetLocationBasedAutoSwitchEnabled())
-         ForcePageReset()
-      EndEvent
-      Event OnHighlightST()
-         SetInfoText("$SkyOutSys_Desc_EnableAutoswitch")
-      EndEvent
-   EndState
+
    State OPT_ImportSettings
       Event OnSelectST()
          SkyrimOutfitSystemNativeFuncs.ImportSettings()
@@ -699,16 +665,9 @@ EndFunction
             AddMenuOptionST  ("OutfitEditor_AddFromList_Menu",     "$SkyOutSys_OEdit_AddFromList_Search", "")
             AddInputOptionST ("OutfitEditor_AddFromList_Filter",   "$SkyOutSys_OEdit_AddFromList_Filter_Name", _sOutfitEditor_AddFromList_Filter)
             AddToggleOptionST("OutfitEditor_AddFromList_Playable", "$SkyOutSys_OEdit_AddFromList_Filter_Playable", _bOutfitEditor_AddFromList_Playable)
-            ; AddEmptyOption()
-            AddHeaderOption  ("$SkyOutSys_OEdit_OutfitSettings_Header")
-            AddMenuOptionST  ("OutfitEditor_EditAllSlotPolicy", "$SkyOutSys_OEdit_EditAllSlotPolicy", SkyrimOutfitSystemNativeFuncs.BodySlotPolicyNamesForOutfit(_sEditingOutfit)[32])
-            AddToggleOptionST("OutfitEditor_ToggleEditSlotPolicy", "$SkyOutSys_OEdit_ToggleSlotPolicyEditor", _sOutfitShowingSlotEditor)
-            AddTextOptionST ("OutfitEditor_SlotPolicyHelp", "$SkyOutSys_OEdit_SlotPolicyHelp", "")
 
             If !_sOutfitShowingSlotEditor
                ShowOutfitSlots()
-            Else
-               ShowOutfitSlotsPolicies()
             EndIf
             ;
             ; All add functions must fail if the armor already exists 
@@ -799,45 +758,6 @@ EndFunction
          Else
             AddTextOption("$SkyOutSys_OutfitEditor_OutfitIsEmpty", "")
          EndIf
-      ;/EndBlock/;
-      EndFunction
-      Function ShowOutfitSlotsPolicies()
-         ;/Block/; ; Right column
-         SetCursorPosition(1)
-         AddHeaderOption("$SkyOutSys_MCMHeader_OutfitSlots")
-         String[] sSlotPolicies = SkyrimOutfitSystemNativeFuncs.BodySlotPolicyNamesForOutfit(_sEditingOutfit)
-         Int iSlotCount = 32
-         Int iPageCount = iSlotCount / 8
-         If iPageCount * 8 < iSlotCount
-            iPageCount = iPageCount + 1
-         EndIf
-         If _iOutfitEditorBodySlotPage >= iPageCount
-            _iOutfitEditorBodySlotPage = iPageCount - 1
-         EndIf
-         Int iOffset    = _iOutfitEditorBodySlotPage * 8
-         Int iIterator  = 0
-         Int iMax       = iSlotCount - iOffset
-         If iMax > 8 ; (visible - 3) -- make room for page separator and buttons
-            iMax = 8
-         EndIf
-         While iIterator < iMax
-            String sPolicyName = sSlotPolicies[iIterator + iOffset]
-            Int SlotIndex = iIterator + iOffset
-            AddMenuOptionST("OutfitEditor_BodySlotPolicy_" + SlotIndex, BodySlotName(iIterator + iOffset + 30), sPolicyName)
-            iIterator = iIterator + 1
-         EndWhile
-         Int iFlagsPrev = OPTION_FLAG_NONE
-         Int iFlagsNext = OPTION_FLAG_NONE
-         If _iOutfitEditorBodySlotPage < 1
-            iFlagsPrev = OPTION_FLAG_DISABLED
-         EndIf
-         If _iOutfitEditorBodySlotPage == iPageCount - 1
-            iFlagsNext = OPTION_FLAG_DISABLED
-         EndIf
-         SetCursorPosition(19)
-         AddHeaderOption("")
-         AddTextOptionST("OutfitEditor_BodySlotsPrev", "$SkyOutSys_MCMText_OutfitSlotsPageNumber{" + (_iOutfitEditorBodySlotPage + 1) + "}{" + iPageCount + "}", "$SkyOutSys_MCMText_OutfitSlotsButtonPagePrev", iFlagsPrev)
-         AddTextOptionST("OutfitEditor_BodySlotsNext", "", "$SkyOutSys_MCMText_OutfitSlotsButtonPageNext", iFlagsNext)
       ;/EndBlock/;
       EndFunction
       Function AddArmorToOutfit(Armor kAdd)
@@ -1054,44 +974,6 @@ EndFunction
             Event OnSelectST()
                _bOutfitEditor_AddFromList_Playable = !_bOutfitEditor_AddFromList_Playable
                SetToggleOptionValueST(_bOutfitEditor_AddFromList_Playable)
-            EndEvent
-         EndState
-         State OutfitEditor_ToggleEditSlotPolicy
-            Event OnSelectST()
-               _sOutfitShowingSlotEditor = !_sOutfitShowingSlotEditor
-               _iOutfitEditorBodySlotPage = 0
-               ForcePageReset()
-            EndEvent
-            Event OnHighlightST()
-               SetInfoText("$SkyOutSys_OEdit_ToggleEditSlotPolicy_Desc")
-            EndEvent
-         EndState
-         State OutfitEditor_SlotPolicyHelp
-            Event OnSelectST()
-               ShowMessage("$SkyOutSys_OEdit_SlotPolicy_HelpText1", false)
-               ShowMessage("$SkyOutSys_OEdit_SlotPolicy_HelpText2", false)
-               ShowMessage("$SkyOutSys_OEdit_SlotPolicy_HelpText3", false)
-            EndEvent
-         EndState
-         State OutfitEditor_EditAllSlotPolicy
-            Event OnMenuOpenST()
-               String[] sMenuOptions = SkyrimOutfitSystemNativeFuncs.GetAvailablePolicyNames()
-               String[] sMenu = PrependStringToArray(sMenuOptions, "$SkyOutSys_AutoswitchEdit_Cancel")
-               SetMenuDialogOptions(sMenu)
-               SetMenuDialogStartIndex(0)
-               SetMenuDialogDefaultIndex(0)
-            EndEvent
-            Event OnMenuAcceptST(Int aiIndex)
-               aiIndex = aiIndex - 1
-               If aiIndex == -1 ; user canceled
-                  Return
-               EndIf
-               String[] sCodes = SkyrimOutfitSystemNativeFuncs.GetAvailablePolicyCodes()
-               SkyrimOutfitSystemNativeFuncs.SetAllBodySlotPoliciesForOutfit(_sEditingOutfit, sCodes[aiIndex])
-               ForcePageReset()
-            EndEvent
-            Event OnHighlightST()
-               SetInfoText("$SkyOutSys_OEdit_EditAllSlotPolicy_Desc")
             EndEvent
          EndState
       ;/EndBlock/;

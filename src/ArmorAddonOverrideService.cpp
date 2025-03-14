@@ -25,20 +25,6 @@ Outfit::Outfit(const proto::Outfit& proto, const SKSE::SerializationInterface* i
         }
     }
     m_favorited = proto.is_favorite();
-    for (const auto& pair : proto.slot_policies()) {
-        auto slot = static_cast<RE::BIPED_OBJECT>(pair.first);
-        auto policy = static_cast<SlotPolicy::Mode>(pair.second);
-        if (slot >= RE::BIPED_OBJECTS_META::kNumSlots) {
-            LOG(err, "Invalid slot {}.", static_cast<std::uint32_t>(slot));
-            continue;
-        }
-        if (policy >= SlotPolicy::Mode::kNumModes) {
-            LOG(err, "Invalid slot preference {}", static_cast<int>(policy));
-            continue;
-        }
-        m_slotPolicies[slot] = policy;
-    }
-    m_blanketSlotPolicy = static_cast<SlotPolicy::Mode>(proto.slot_policy());
 }
 
 bool Outfit::conflictsWith(RE::TESObjectARMO* test) const {
@@ -66,89 +52,6 @@ bool Outfit::hasShield() const {
     return false;
 };
 
-void Outfit::setDefaultSlotPolicy() {
-    m_slotPolicies.clear();
-    m_slotPolicies[RE::BIPED_OBJECTS::kShield] = SlotPolicy::Mode::XEXO;
-    m_blanketSlotPolicy = SlotPolicy::Mode::XXOO;
-}
-
-void Outfit::setSlotPolicy(RE::BIPED_OBJECT slot, std::optional<SlotPolicy::Mode> policy) {
-    if (slot >= RE::BIPED_OBJECTS_META::kNumSlots) {
-        LOG(err, "Invalid slot {}.", static_cast<std::uint32_t>(slot));
-        return;
-    }
-    if (policy.has_value()) {
-        if (policy.value() >= SlotPolicy::Mode::kNumModes) {
-            LOG(err, "Invalid slot preference {}.", static_cast<int>(policy.value()));
-            return;
-        }
-        m_slotPolicies[slot] = policy.value();
-    } else {
-        m_slotPolicies.erase(slot);
-    }
-}
-
-void Outfit::setBlanketSlotPolicy(SlotPolicy::Mode policy) {
-    if (policy >= SlotPolicy::Mode::kNumModes) {
-        LOG(err, "Invalid slot preference {}.", static_cast<int>(policy));
-        return;
-    }
-    m_blanketSlotPolicy = policy;
-}
-
-std::unordered_set<RE::TESObjectARMO*> Outfit::computeDisplaySet(const std::unordered_set<RE::TESObjectARMO*>& equippedSet) {
-    // Helper function that assigns the armor's to the positions in an array that match the armor's slot mask.
-    auto assignToMatchingSlots = [](std::array<RE::TESObjectARMO*, RE::BIPED_OBJECTS_META::kNumSlots>& dest, RE::TESObjectARMO* armor) {
-        auto mask = static_cast<uint32_t>(armor->GetSlotMask());
-        for (auto slot = RE::BIPED_OBJECTS_META::kFirstSlot; slot < RE::BIPED_OBJECTS_META::kNumSlots; slot++) {
-            if (mask & (1 << slot)) dest[slot] = armor;
-        }
-    };
-
-    // Get the list with the equipped armor in each slot
-    std::array<RE::TESObjectARMO*, RE::BIPED_OBJECTS_META::kNumSlots> equipped{nullptr};
-    for (auto armor : equippedSet) {
-        if (!armor) continue;
-        assignToMatchingSlots(equipped, armor);
-    }
-
-    // Get the list with the outfit armor in each slot
-    std::array<RE::TESObjectARMO*, RE::BIPED_OBJECTS_META::kNumSlots> outfit{nullptr};
-    for (auto armor : m_armors) {
-        if (!armor) continue;
-        assignToMatchingSlots(outfit, armor);
-    }
-
-    // Go pairwise through the two lists and select what goes in the results slot
-    std::unordered_set<RE::TESObjectARMO*> result;
-    std::uint32_t occupiedMask = 0;
-    for (auto slot = RE::BIPED_OBJECTS_META::kFirstSlot; slot < RE::BIPED_OBJECTS_META::kNumSlots; slot++) {
-        // Someone before us already got this slot.
-        if (occupiedMask & (1 << slot)) continue;
-        // Select the slot's policy, falling back to the outfit's policy if none.
-        SlotPolicy::Mode preference = m_blanketSlotPolicy;
-        auto slotSpecificPolicy = m_slotPolicies.find(static_cast<RE::BIPED_OBJECT>(slot));
-        if (slotSpecificPolicy != m_slotPolicies.end()) preference = slotSpecificPolicy->second;
-        auto selection = SlotPolicy::select(preference, equipped[slot], outfit[slot]);
-        RE::TESObjectARMO* selectedArmor = nullptr;
-        switch (selection) {
-        case SlotPolicy::Selection::EQUIPPED:
-            selectedArmor = equipped[slot];
-            break;
-        case SlotPolicy::Selection::OUTFIT:
-            selectedArmor = outfit[slot];
-            break;
-        case SlotPolicy::Selection::EMPTY:
-            break;
-        }
-        if (!selectedArmor) continue;
-        occupiedMask |= static_cast<uint32_t>(selectedArmor->GetSlotMask());
-        result.emplace(selectedArmor);
-    }
-
-    return result;
-};
-
 proto::Outfit Outfit::save() const {
     proto::Outfit out;
     out.set_name(m_name);
@@ -157,10 +60,6 @@ proto::Outfit Outfit::save() const {
             out.add_armors(armor->formID);
     }
     out.set_is_favorite(m_favorited);
-    for (const auto& policy : m_slotPolicies) {
-        out.mutable_slot_policies()->emplace(static_cast<std::uint32_t>(policy.first), static_cast<std::uint32_t>(policy.second));
-    }
-    out.set_slot_policy(static_cast<std::uint32_t>(m_blanketSlotPolicy));
     return out;
 }
 
@@ -168,12 +67,18 @@ ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& 
     // Extract data from the protobuf struct.
     enabled = data.enabled();
     std::map<RE::RawActorHandle, ActorOutfitAssignments> actorOutfitAssignmentsLocal;
+    auto pc = RE::PlayerCharacter::GetSingleton()->GetHandle().native_handle();
+
     for (const auto& actorAssn : data.actor_outfit_assignments()) {
         // Lookup the actor
         std::uint64_t handle;
         RE::NiPointer<RE::Actor> actor;
-        if (!intfc->ResolveHandle(actorAssn.first, handle))
+        if (!intfc->ResolveHandle(actorAssn.first, handle)) {
+            // LOG(info, fmt::format("Failed to resolve for {:d}", handle));
             continue;
+        }
+
+        // LOG(info, fmt::format("Adding PC actor {:d}, handle {:d}", actor->formID, handle));
 
         ActorOutfitAssignments assignments;
         assignments.currentOutfitName =
@@ -185,22 +90,19 @@ ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& 
         }
         actorOutfitAssignmentsLocal[static_cast<RE::RawActorHandle>(handle)] = assignments;
     }
+
+    // if the player character is not inside, add it
+    if (actorOutfitAssignmentsLocal.count(pc) == 0) {
+        LOG(info, "PC player does NOT exists inside the protocol");
+        actorOutfitAssignmentsLocal[pc] = ActorOutfitAssignments();
+    }
+    else LOG(info, "PC player already exists inside the protocol");
+
     actorOutfitAssignments = actorOutfitAssignmentsLocal;
     for (const auto& outfitData : data.outfits()) {
         outfits.emplace(std::piecewise_construct,
                         std::forward_as_tuple(cobb::istring(outfitData.name().data(), outfitData.name().size())),
                         std::forward_as_tuple(outfitData, intfc));
-    }
-    locationBasedAutoSwitchEnabled = data.location_based_auto_switch_enabled();
-
-    // If the loaded actor assignments are empty, then we know we loaded the old format... convert from that instead.
-    if (actorOutfitAssignmentsLocal.empty()) {
-        actorOutfitAssignments[RE::PlayerCharacter::GetSingleton()->GetHandle().native_handle()].currentOutfitName =
-            cobb::istring(data.obsolete_current_outfit_name().data(), data.obsolete_current_outfit_name().size());
-        for (const auto& locOutfitData : data.obsolete_location_based_outfits()) {
-            actorOutfitAssignments[RE::PlayerCharacter::GetSingleton()->GetHandle().native_handle()].locationOutfits.emplace(LocationType(locOutfitData.first),
-                                                                                                                             cobb::istring(locOutfitData.second.data(), locOutfitData.second.size()));
-        }
     }
 }
 
@@ -217,15 +119,14 @@ Outfit& ArmorAddonOverrideService::getOutfit(const char* name) {
 Outfit& ArmorAddonOverrideService::getOrCreateOutfit(const char* name) {
     _validateNameOrThrow(name);
     auto created = outfits.emplace(name, name);
-    if (created.second) created.first->second.setDefaultSlotPolicy();
     return created.first->second;
 }
 //
 void ArmorAddonOverrideService::addOutfit(const char* name) {
     _validateNameOrThrow(name);
     auto created = outfits.emplace(name, name);
-    if (created.second) created.first->second.setDefaultSlotPolicy();
 }
+
 void ArmorAddonOverrideService::addOutfit(const char* name, std::vector<RE::TESObjectARMO*> armors) {
     _validateNameOrThrow(name);
     auto& created = outfits.emplace(name, name).first->second;
@@ -234,18 +135,20 @@ void ArmorAddonOverrideService::addOutfit(const char* name, std::vector<RE::TESO
         if (armor)
             created.m_armors.insert(armor);
     }
-    created.setDefaultSlotPolicy();
 }
+
 Outfit& ArmorAddonOverrideService::currentOutfit(RE::RawActorHandle target) {
     if (!actorOutfitAssignments.contains(target)) return g_noOutfit;
     if (actorOutfitAssignments.at(target).currentOutfitName == g_noOutfitName) return g_noOutfit;
     auto outfit = outfits.find(actorOutfitAssignments.at(target).currentOutfitName);
     if (outfit == outfits.end()) return g_noOutfit;
     return outfit->second;
-};
+}
+
 bool ArmorAddonOverrideService::hasOutfit(const char* name) const {
     return outfits.contains(name);
 }
+
 void ArmorAddonOverrideService::deleteOutfit(const char* name) {
     outfits.erase(name);
     for (auto& assn : actorOutfitAssignments) {
@@ -346,13 +249,11 @@ std::unordered_set<RE::RawActorHandle> ArmorAddonOverrideService::listActors() {
     return actors;
 }
 
-void ArmorAddonOverrideService::setLocationBasedAutoSwitchEnabled(bool newValue) noexcept {
-    locationBasedAutoSwitchEnabled = newValue;
-}
-
 void ArmorAddonOverrideService::setOutfitUsingLocation(LocationType location, RE::RawActorHandle target) {
-    if (actorOutfitAssignments.count(target) == 0)
+    if (actorOutfitAssignments.count(target) == 0) {
+        LOG(info, "No target found, cannot set outfit using location!");
         return;
+    }
     auto it = actorOutfitAssignments.at(target).locationOutfits.find(location);
     if (it != actorOutfitAssignments.at(target).locationOutfits.end()) {
         setOutfit(it->second.c_str(), target);
@@ -360,8 +261,10 @@ void ArmorAddonOverrideService::setOutfitUsingLocation(LocationType location, RE
 }
 
 void ArmorAddonOverrideService::setLocationOutfit(LocationType location, const char* name, RE::RawActorHandle target) {
-    if (actorOutfitAssignments.count(target) == 0)
+    if (actorOutfitAssignments.count(target) == 0) {
+        LOG(info, "No target found, cannot set location outfit!");
         return;
+    }
     if (!std::string(name).empty()) {// Can never set outfit to the "" outfit. Use unsetLocationOutfit instead.
         actorOutfitAssignments.at(target).locationOutfits[location] = name;
     }
@@ -458,7 +361,6 @@ proto::OutfitSystem ArmorAddonOverrideService::save() {
         auto newOutfit = out.add_outfits();
         *newOutfit = outfit.second.save();
     }
-    out.set_location_based_auto_switch_enabled(locationBasedAutoSwitchEnabled);
     return out;
 }
 //
@@ -482,46 +384,3 @@ void ArmorAddonOverrideService::dump() const {
     }
     LOG(info, "All state has been dumped.");
 }
-
-namespace SlotPolicy {
-    // Negative values mean "advanced option"
-    std::array<Metadata, kNumModes> g_policiesMetadata = {
-        Metadata{"XXXX", 100, true},// Never show anything
-        Metadata{"XXXE", 101, true},// If outfit and equipped, show equipped
-        Metadata{"XXXO", 2, false}, // If outfit and equipped, show outfit (require equipped, no passthrough)
-        Metadata{"XXOX", 102, true},// If only outfit, show outfit
-        Metadata{"XXOE", 103, true},// If only outfit, show outfit. If both, show equipped
-        Metadata{"XXOO", 1, false}, // If outfit, show outfit (always show outfit, no passthough)
-        Metadata{"XEXX", 104, true},// If only equipped, show equipped
-        Metadata{"XEXE", 105, true},// If equipped, show equipped
-        Metadata{"XEXO", 3, false}, // If only equipped, show equipped. If both, show outfit
-        Metadata{"XEOX", 106, true},// If only equipped, show equipped. If only outfit, show outfit
-        Metadata{"XEOE", 107, true},// If only equipped, show equipped. If only outfit, show outfit. If both, show equipped
-        Metadata{"XEOO", 108, true} // If only equipped, show equipped. If only outfit, show outfit. If both, show outfit
-    };
-
-    Selection select(Mode policy, bool hasEquipped, bool hasOutfit) {
-        if (policy >= Mode::kNumModes) {
-            LOG(err, "Invalid slot preference {}", static_cast<int>(policy));  // Removed .value()
-            policy = Mode::XXXX;
-        }
-        char out;
-        if (!hasEquipped && !hasOutfit) {
-            out = g_policiesMetadata[policy].code[0];
-        } else if (hasEquipped && !hasOutfit) {
-            out = g_policiesMetadata[policy].code[1];
-        } else if (!hasEquipped && hasOutfit) {
-            out = g_policiesMetadata[policy].code[2];
-        } else if (hasEquipped && hasOutfit) {
-            out = g_policiesMetadata[policy].code[3];
-        }
-        switch (out) {
-            case 'E':
-                return Selection::EQUIPPED;
-            case 'O':
-                return Selection::OUTFIT;
-            default:
-                return Selection::EMPTY;
-        }
-    }
-}// namespace SlotPolicy

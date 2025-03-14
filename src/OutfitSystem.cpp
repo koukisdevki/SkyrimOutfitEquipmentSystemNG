@@ -87,15 +87,12 @@ namespace OutfitSystem {
         return result;
     }
 
-    void RefreshArmorFor(RE::BSScript::IVirtualMachine* registry,
-                         std::uint32_t stackId,
-                         RE::StaticFunctionTag*,
-                         RE::Actor* target) {
-        LogExit exitPrint("RefreshArmorFor"sv);
-        ERROR_AND_RETURN_IF(target == nullptr, "Cannot refresh armor on a None RE::Actor.", registry, stackId);
-
+    void RefreshArmorForActor(RE::Actor* target) {
         auto& svc = ArmorAddonOverrideService::GetInstance();
         auto& outfit = svc.currentOutfit(target->GetHandle().native_handle());
+
+        // Compute what should be displayed based on outfit settings
+        auto displayItems = outfit.m_armors;
 
         bool isPlayerCharacter = (target == RE::PlayerCharacter::GetSingleton());
         bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
@@ -108,49 +105,43 @@ namespace OutfitSystem {
         }
 
         // Get currently equipped items
-        std::unordered_set<RE::TESObjectARMO*> equippedItems;
+        std::unordered_set<RE::TESObjectARMO*> equippedArmors;
+        std::unordered_set<RE::TESObjectARMO*> outfitArmorsInInventory;
         auto inv = target->GetInventory();
         for (const auto& [item, data] : inv) {
             if (item && item->Is(RE::FormType::Armor)) {
                 auto armor = item->As<RE::TESObjectARMO>();
                 if (armor && data.second && data.second->IsWorn()) {
-                    equippedItems.insert(armor);
+                    equippedArmors.insert(armor);
                 }
+
+                // if the current armor is part of the outfit, mark it as an inventory item
+                if (displayItems.count(armor) != 0) outfitArmorsInInventory.insert(armor);
             }
         }
 
-        // Compute what should be displayed based on outfit settings
-        auto displayItems = outfit.computeDisplaySet(equippedItems);
 
-        // Unequip items that shouldn't be displayed
-        for (auto armor : equippedItems) {
-            if (displayItems.find(armor) == displayItems.end()) {
-                // This armor should be unequipped
-                // Get the appropriate slot for this armor
-                auto* equipSlot = armor->GetEquipSlot();
 
-                // Use ActorEquipManager to unequip
-                equipManager->UnequipObject(target, armor, nullptr, 1, equipSlot, false, forceEquip, true, true, nullptr);
-                LOG(info,"Unequipped {} from {}", armor->GetName(), target->GetName());
+        //If outfit exists, unequip armors that are not part of the outfit
+        if (outfit != g_noOutfit) {
+            for (auto equippedArmor : equippedArmors) {
+                // if the currently equipped outfit is not part of the outfit, remove it
+                if (displayItems.count(equippedArmor) == 0) {
+                    auto* equipSlot = equippedArmor->GetEquipSlot();
+                    equipManager->UnequipObject(target, equippedArmor, nullptr, 1, equipSlot, false, false, false, true);
+                }
             }
+
+            // if the equipped armors equal previous outfit, then remove them.
+            // More options: Must be part of inventory, automatically add to inventory, and if that is enabled automatically remove from inventory.
         }
 
         // Equip items that should be displayed
         for (auto armor : displayItems) {
-            if (equippedItems.find(armor) == equippedItems.end()) {
-                // This armor should be equipped
-
-                // Check if the actor has the item in inventory
-                bool hasItem = false;
-                for (const auto& [item, data] : inv) {
-                    if (item == armor && data.first > 0) {
-                        hasItem = true;
-                        break;
-                    }
-                }
-
-                // If not in inventory, add it
-                if (!hasItem) {
+            // This armor should be equipped if not currently equipped
+            if (equippedArmors.count(armor) == 0) {
+                // if not part of the user's inventory items, add
+                if (outfitArmorsInInventory.count(armor) == 0) {
                     target->AddObjectToContainer(armor, nullptr, 1, nullptr);
                     LOG(info,"Added {} to {}'s inventory", armor->GetName(), target->GetName());
                 }
@@ -165,8 +156,16 @@ namespace OutfitSystem {
         }
 
         LOG(info,"Updated outfit for actor {}, ID: {}", target->GetName(), target->GetFormID());
-        LOG(info,"Items equipped: {}", equippedItems.size());
-        LOG(info,"Items displayed per outfit: {}", displayItems.size());
+        LOG(info,"Armors equipped: {}", displayItems.size());
+    }
+
+    void RefreshArmorFor(RE::BSScript::IVirtualMachine* registry,
+                         std::uint32_t stackId,
+                         RE::StaticFunctionTag*,
+                         RE::Actor* target) {
+        LogExit exitPrint("RefreshArmorFor"sv);
+        ERROR_AND_RETURN_IF(target == nullptr, "Cannot refresh armor on a None RE::Actor.", registry, stackId);
+        RefreshArmorForActor(target);
     }
 
     void RefreshArmorForAllConfiguredActors(RE::BSScript::IVirtualMachine* registry,
@@ -185,77 +184,11 @@ namespace OutfitSystem {
         auto actors = service.listActors();
 
         for (auto& actorRef : actors) {
-            auto actor = RE::Actor::LookupByHandle(actorRef);
-            bool isPlayerCharacter = (actor.get() == RE::PlayerCharacter::GetSingleton());
-            bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
-
-            if (!actor)
-                continue;
-
-            auto& svc = ArmorAddonOverrideService::GetInstance();
-            auto& outfit = svc.currentOutfit(actor->GetHandle().native_handle());
-
-            // Get currently equipped items
-            std::unordered_set<RE::TESObjectARMO*> equippedItems;
-            auto inv = actor->GetInventory();
-            for (const auto& [item, data] : inv) {
-                if (item && item->Is(RE::FormType::Armor)) {
-                    auto armor = item->As<RE::TESObjectARMO>();
-                    if (armor && data.second && data.second->IsWorn()) {
-                        equippedItems.insert(armor);
-                    }
-                }
-            }
-
-            // Compute what should be displayed based on outfit settings
-            auto displayItems = outfit.computeDisplaySet(equippedItems);
-
-            // Unequip items that shouldn't be displayed
-            for (auto armor : equippedItems) {
-                if (displayItems.find(armor) == displayItems.end()) {
-                    // This armor should be unequipped
-                    // Get the appropriate slot for this armor
-                    auto* equipSlot = armor->GetEquipSlot();
-
-                    // Use ActorEquipManager to unequip
-                    equipManager->UnequipObject(actor.get(), armor, nullptr, 1, equipSlot, false, forceEquip, true, true, nullptr);
-                    LOG(info,"Unequipped {} from {}", armor->GetName(), actor->GetName());
-                }
-            }
-
-            // Equip items that should be displayed
-            for (auto armor : displayItems) {
-                if (equippedItems.find(armor) == equippedItems.end()) {
-                    // This armor should be equipped
-
-                    // Check if the actor has the item in inventory
-                    bool hasItem = false;
-                    for (const auto& [item, data] : inv) {
-                        if (item == armor && data.first > 0) {
-                            hasItem = true;
-                            break;
-                        }
-                    }
-
-                    // If not in inventory, add it
-                    if (!hasItem) {
-                        actor->AddObjectToContainer(armor, nullptr, 1, nullptr);
-                        LOG(info,"Added {} to {}'s inventory", armor->GetName(), actor->GetName());
-                    }
-
-                    // Get the appropriate slot for this armor
-                    auto* equipSlot = armor->GetEquipSlot();
-
-                    // Use ActorEquipManager to equip
-                    equipManager->EquipObject(actor.get(), armor, nullptr, 1, equipSlot, false, forceEquip, true, true);
-                    LOG(info,"Equipped {} on {}", armor->GetName(), actor->GetName());
-                }
-            }
-
+            auto actor = RE::Actor::LookupByHandle(actorRef).get();
+            RefreshArmorForActor(actor);
             LOG(info,"Updated outfit for actor {}, ID: {}", actor->GetName(), actor->GetFormID());
         }
     }
-
 
     std::vector<RE::Actor*> ActorsNearPC(RE::BSScript::IVirtualMachine* registry,
                                          std::uint32_t stackId,
@@ -452,106 +385,6 @@ namespace OutfitSystem {
             return result;
         }
     }// namespace BodySlotListing
-    namespace BodySlotPolicy {
-        std::vector<RE::BSFixedString> BodySlotPolicyNamesForOutfit(RE::BSScript::IVirtualMachine* registry,
-                                                                    std::uint32_t stackId,
-                                                                    RE::StaticFunctionTag*,
-                                                                    RE::BSFixedString name) {
-            LogExit exitPrint("BodySlotPolicy.BodySlotPolicyNamesForOutfit"sv);
-            std::vector<RE::BSFixedString> result;
-            auto& service = ArmorAddonOverrideService::GetInstance();
-            auto& outfit = service.getOutfit(name.data());
-            for (auto slot = RE::BIPED_OBJECTS_META::kFirstSlot; slot < RE::BIPED_OBJECTS_META::kNumSlots; slot++) {
-                auto slotSpecificPolicy = outfit.m_slotPolicies.find(static_cast<RE::BIPED_OBJECT>(slot));
-                if (slotSpecificPolicy != outfit.m_slotPolicies.end()) {
-                    result.emplace_back(SlotPolicy::g_policiesMetadata.at(static_cast<char>(slotSpecificPolicy->second)).translationKey());
-                } else {
-                    result.emplace_back("$SkyOutSys_Desc_PolicyName_INHERIT");
-                }
-            }
-            // Add in the overall outfit's policy to the end
-            result.emplace_back(SlotPolicy::g_policiesMetadata.at(static_cast<char>(outfit.m_blanketSlotPolicy)).translationKey());
-            return result;
-        }
-        void SetBodySlotPoliciesForOutfit(RE::BSScript::IVirtualMachine* registry,
-                                          std::uint32_t stackId,
-                                          RE::StaticFunctionTag*,
-                                          RE::BSFixedString name,
-                                          std::uint32_t slot,
-                                          RE::BSFixedString code) {
-            LogExit exitPrint("BodySlotPolicy.SetBodySlotPoliciesForOutfit"sv);
-            auto& service = ArmorAddonOverrideService::GetInstance();
-            auto& outfit = service.getOutfit(name.data());
-            if (slot >= RE::BIPED_OBJECTS_META::kNumSlots) {
-                LOG(err, "Invalid slot {}.", static_cast<std::uint32_t>(slot));
-                return;
-            }
-            if (code.empty()) {
-                outfit.setSlotPolicy(static_cast<RE::BIPED_OBJECT>(slot), std::nullopt);
-            } else {
-                std::string codeString(code);
-                auto found = std::find_if(SlotPolicy::g_policiesMetadata.begin(), SlotPolicy::g_policiesMetadata.end(), [&](const SlotPolicy::Metadata& first) {
-                    return first.code == codeString;
-                });
-                if (found == SlotPolicy::g_policiesMetadata.end()) return;
-                outfit.setSlotPolicy(static_cast<RE::BIPED_OBJECT>(slot), static_cast<SlotPolicy::Mode>(found - SlotPolicy::g_policiesMetadata.begin()));
-            }
-        }
-        void SetAllBodySlotPoliciesForOutfit(RE::BSScript::IVirtualMachine* registry,
-                                             std::uint32_t stackId,
-                                             RE::StaticFunctionTag*,
-                                             RE::BSFixedString name,
-                                             RE::BSFixedString code) {
-            LogExit exitPrint("BodySlotPolicy.SetAllBodySlotPoliciesForOutfit"sv);
-            auto& service = ArmorAddonOverrideService::GetInstance();
-            auto& outfit = service.getOutfit(name.data());
-            std::string codeString(code);
-            auto found = std::find_if(SlotPolicy::g_policiesMetadata.begin(), SlotPolicy::g_policiesMetadata.end(), [&](const SlotPolicy::Metadata& first) {
-                return first.code == codeString;
-            });
-            if (found == SlotPolicy::g_policiesMetadata.end()) return;
-            outfit.setBlanketSlotPolicy(static_cast<SlotPolicy::Mode>(found - SlotPolicy::g_policiesMetadata.begin()));
-        }
-        void SetBodySlotPolicyToDefaultForOutfit(RE::BSScript::IVirtualMachine* registry,
-                                                 std::uint32_t stackId,
-                                                 RE::StaticFunctionTag*,
-                                                 RE::BSFixedString name) {
-            LogExit exitPrint("BodySlotPolicy.SetBodySlotPolicyToDefaultForOutfit"sv);
-            auto& service = ArmorAddonOverrideService::GetInstance();
-            auto& outfit = service.getOutfit(name.data());
-            outfit.setDefaultSlotPolicy();
-        }
-        std::vector<RE::BSFixedString> GetAvailablePolicyNames(RE::BSScript::IVirtualMachine* registry,
-                                                               std::uint32_t stackId,
-                                                               RE::StaticFunctionTag*) {
-            LogExit exitPrint("BodySlotPolicy.GetAvailablePolicyNames"sv);
-            auto policies = std::vector<SlotPolicy::Metadata>(SlotPolicy::g_policiesMetadata.begin(), SlotPolicy::g_policiesMetadata.end());
-            std::erase_if(policies, [](const SlotPolicy::Metadata& first) { return first.advanced; });
-            std::sort(policies.begin(), policies.end(), [](const SlotPolicy::Metadata& first, const SlotPolicy::Metadata& second) {
-                return first.sortOrder < second.sortOrder;
-            });
-            std::vector<RE::BSFixedString> result;
-            for (const auto& policy : policies) {
-                result.emplace_back(policy.translationKey());
-            }
-            return result;
-        }
-        std::vector<RE::BSFixedString> GetAvailablePolicyCodes(RE::BSScript::IVirtualMachine* registry,
-                                                               std::uint32_t stackId,
-                                                               RE::StaticFunctionTag*) {
-            LogExit exitPrint("BodySlotPolicy.GetAvailablePolicyCodes"sv);
-            auto policies = std::vector<SlotPolicy::Metadata>(SlotPolicy::g_policiesMetadata.begin(), SlotPolicy::g_policiesMetadata.end());
-            std::erase_if(policies, [](const SlotPolicy::Metadata& first) { return first.advanced; });
-            std::sort(policies.begin(), policies.end(), [](const SlotPolicy::Metadata& first, const SlotPolicy::Metadata& second) {
-                return first.sortOrder < second.sortOrder;
-            });
-            std::vector<RE::BSFixedString> result;
-            for (const auto& policy : policies) {
-                result.emplace_back(policy.code);
-            }
-            return result;
-        }
-    }// namespace BodySlotPolicy
     namespace StringSorts {
         std::vector<RE::BSFixedString> NaturalSort_ASCII(RE::BSScript::IVirtualMachine* registry,
                                                          std::uint32_t stackId,
@@ -955,20 +788,6 @@ namespace OutfitSystem {
 #endif
         return actorVec;
     }
-    void SetLocationBasedAutoSwitchEnabled(RE::BSScript::IVirtualMachine* registry,
-                                           std::uint32_t stackId,
-                                           RE::StaticFunctionTag*,
-
-                                           bool value) {
-        LogExit exitPrint("SetLocationBasedAutoSwitchEnabled"sv);
-        ArmorAddonOverrideService::GetInstance().setLocationBasedAutoSwitchEnabled(value);
-    }
-    bool GetLocationBasedAutoSwitchEnabled(RE::BSScript::IVirtualMachine* registry,
-                                           std::uint32_t stackId,
-                                           RE::StaticFunctionTag*) {
-        LogExit exitPrint("GetLocationBasedAutoSwitchEnabled"sv);
-        return ArmorAddonOverrideService::GetInstance().locationBasedAutoSwitchEnabled;
-    }
     std::vector<std::uint32_t> GetAutoSwitchLocationArray(RE::BSScript::IVirtualMachine* registry,
                                                           std::uint32_t stackId,
                                                           RE::StaticFunctionTag*) {
@@ -1023,6 +842,7 @@ namespace OutfitSystem {
         }
         return service.checkLocationType(keywords, weather_flags, RE::PlayerCharacter::GetSingleton()->CreateRefHandle().native_handle());
     }
+
     std::uint32_t IdentifyLocationType(RE::BSScript::IVirtualMachine* registry,
                                        std::uint32_t stackId,
                                        RE::StaticFunctionTag*,
@@ -1036,16 +856,15 @@ namespace OutfitSystem {
                                                            (RE::TESWeather*) weather_skse)
                                               .value_or(LocationType::World));
     }
-    void SetOutfitUsingLocation(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*,
-                                RE::Actor* actor,
+    void SetOutfitsUsingLocation(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*,
                                 RE::BGSLocation* location_skse,
                                 RE::TESWeather* weather_skse) {
-        LogExit exitPrint("SetOutfitUsingLocation"sv);
+        LogExit exitPrint("SetOutfitsUsingLocation"sv);
         // NOTE: Location can be NULL.
         auto& service = ArmorAddonOverrideService::GetInstance();
-        if (!actor)
-            return;
-        if (service.locationBasedAutoSwitchEnabled) {
+        auto actors = service.listActors();
+
+        for (auto& actor : actors) {
             auto location = identifyLocation(location_skse, weather_skse);
             // Debug notifications for location classification.
             /*
@@ -1055,7 +874,7 @@ namespace OutfitSystem {
             RE::DebugNotification(message, nullptr, false);
             */
             if (location.has_value()) {
-                service.setOutfitUsingLocation(location.value(), actor->GetHandle().native_handle());
+                service.setOutfitUsingLocation(location.value(), actor);
             }
         }
     }
@@ -1222,32 +1041,6 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
             "SkyrimOutfitSystemNativeFuncs",
             BodySlotListing::Clear);
     }
-    {//body slot policy
-        registry->RegisterFunction(
-            "BodySlotPolicyNamesForOutfit",
-            "SkyrimOutfitSystemNativeFuncs",
-            BodySlotPolicy::BodySlotPolicyNamesForOutfit);
-        registry->RegisterFunction(
-            "SetBodySlotPoliciesForOutfit",
-            "SkyrimOutfitSystemNativeFuncs",
-            BodySlotPolicy::SetBodySlotPoliciesForOutfit);
-        registry->RegisterFunction(
-            "SetAllBodySlotPoliciesForOutfit",
-            "SkyrimOutfitSystemNativeFuncs",
-            BodySlotPolicy::SetAllBodySlotPoliciesForOutfit);
-        registry->RegisterFunction(
-            "SetBodySlotPolicyToDefaultForOutfit",
-            "SkyrimOutfitSystemNativeFuncs",
-            BodySlotPolicy::SetBodySlotPolicyToDefaultForOutfit);
-        registry->RegisterFunction(
-            "GetAvailablePolicyNames",
-            "SkyrimOutfitSystemNativeFuncs",
-            BodySlotPolicy::GetAvailablePolicyNames);
-        registry->RegisterFunction(
-            "GetAvailablePolicyCodes",
-            "SkyrimOutfitSystemNativeFuncs",
-            BodySlotPolicy::GetAvailablePolicyCodes);
-    }
     {// string sorts
         registry->RegisterFunction(
             "NaturalSort_ASCII",
@@ -1354,14 +1147,6 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "SkyrimOutfitSystemNativeFuncs",
         ListActors);
     registry->RegisterFunction(
-        "SetLocationBasedAutoSwitchEnabled",
-        "SkyrimOutfitSystemNativeFuncs",
-        SetLocationBasedAutoSwitchEnabled);
-    registry->RegisterFunction(
-        "GetLocationBasedAutoSwitchEnabled",
-        "SkyrimOutfitSystemNativeFuncs",
-        GetLocationBasedAutoSwitchEnabled);
-    registry->RegisterFunction(
         "GetAutoSwitchLocationArray",
         "SkyrimOutfitSystemNativeFuncs",
         GetAutoSwitchLocationArray);
@@ -1370,9 +1155,9 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "SkyrimOutfitSystemNativeFuncs",
         IdentifyLocationType);
     registry->RegisterFunction(
-        "SetOutfitUsingLocation",
+        "SetOutfitsUsingLocation",
         "SkyrimOutfitSystemNativeFuncs",
-        SetOutfitUsingLocation);
+        SetOutfitsUsingLocation);
     registry->RegisterFunction(
         "SetLocationOutfit",
         "SkyrimOutfitSystemNativeFuncs",

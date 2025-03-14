@@ -71,10 +71,6 @@ Bool     Function ArmorConflictsWithOutfit (Armor akTest, String asOutfitName) G
 Armor[]  Function GetOutfitContents (String asOutfitName) Global Native
 Bool     Function GetOutfitFavoriteStatus(String asOutfitName) Global Native
          Function SetOutfitFavoriteStatus(String asOutfitName, Bool abFavorite) Global Native
-String[] Function BodySlotPolicyNamesForOutfit(String asOutfitName) Global Native
-         Function SetBodySlotPoliciesForOutfit(String asOutfitName, Int aiSlot, String aiPolicyCode) Global Native
-         Function SetAllBodySlotPoliciesForOutfit(String asOutfitName, String aiPolicyCode) Global Native
-         Function SetBodySlotPolicyToDefaultForOutfit(String asOutfitName) Global Native
 String[] Function GetAvailablePolicyNames() Global Native
 String[] Function GetAvailablePolicyCodes() Global Native
 String   Function GetSelectedOutfit (Actor actor) Global Native
@@ -91,11 +87,9 @@ Bool     Function OutfitExists      (String asOutfitName) Global Native
          Function RemoveActor (Actor akSubject) Global Native
 Actor[]  Function ListActors() Global Native
 
-         Function SetLocationBasedAutoSwitchEnabled (Bool abEnabled) Global Native
-Bool     Function GetLocationBasedAutoSwitchEnabled () Global Native
 Int[]    Function GetAutoSwitchLocationArray () Global Native
 Int      Function IdentifyLocationType (Location alLocation, Weather awWeather) Global Native
-         Function SetOutfitUsingLocation (Actor actor, Location alLocation, Weather awWeather) Global Native
+         Function SetOutfitsUsingLocation (Location alLocation, Weather awWeather) Global Native
          Function SetLocationOutfit (Actor actor, Int aiLocationType, String asOutfitName) Global Native
          Function UnsetLocationOutfit (Actor actor, Int aiLocationType) Global Native
 String   Function GetLocationOutfit (Actor actor, Int aiLocationType) Global Native

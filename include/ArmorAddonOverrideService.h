@@ -42,66 +42,30 @@ struct WeatherFlags {
     bool rainy = false;
 };
 
-namespace SlotPolicy {
-    enum Mode : std::uint8_t {
-        XXXX,
-        XXXE,
-        XXXO,
-        XXOX,
-        XXOE,
-        XXOO,
-        XEXX,
-        XEXE,
-        XEXO,
-        XEOX,
-        XEOE,
-        XEOO,
-        kNumModes
-    };
-
-    struct Metadata {
-        std::string code;
-        std::int32_t sortOrder;
-        bool advanced;
-        std::string translationKey() const {
-            return "$SkyOutSys_Desc_EasyPolicyName_" + code;
-        }
-    };
-
-    extern std::array<Metadata, kNumModes> g_policiesMetadata;
-
-    enum class Selection {
-        EMPTY,
-        EQUIPPED,
-        OUTFIT
-    };
-
-    Selection select(Mode policy, bool hasEquipped, bool hasOutfit);
-}// namespace SlotPolicy
-
 struct Outfit {
     Outfit(const proto::Outfit& proto, const SKSE::SerializationInterface* intfc);
-    Outfit(const char* n) : m_name(n), m_favorited(false), m_blanketSlotPolicy(SlotPolicy::Mode::XXOO){};
+    Outfit(const char* n) : m_name(n), m_favorited(false){};
     Outfit(const Outfit& other) = default;
     Outfit(const char* n, const Outfit& other) : m_name(n), m_favorited(false) {
         m_armors = other.m_armors;
-        m_slotPolicies = other.m_slotPolicies;
-        m_blanketSlotPolicy = other.m_blanketSlotPolicy;
     }
     std::string m_name;// can't be const; prevents assigning to Outfit vars
     std::unordered_set<RE::TESObjectARMO*> m_armors;
     bool m_favorited;
-    std::map<RE::BIPED_OBJECT, SlotPolicy::Mode> m_slotPolicies;
-    SlotPolicy::Mode m_blanketSlotPolicy;
 
     bool conflictsWith(RE::TESObjectARMO*) const;
     bool hasShield() const;
     std::unordered_set<RE::TESObjectARMO*> computeDisplaySet(const std::unordered_set<RE::TESObjectARMO*>& equippedSet);
 
-    void setSlotPolicy(RE::BIPED_OBJECT slot, std::optional<SlotPolicy::Mode> policy);
-    void setBlanketSlotPolicy(SlotPolicy::Mode policy);
-    void setDefaultSlotPolicy();
     proto::Outfit save() const;// can throw ArmorAddonOverrideService::save_error
+
+    bool operator==(const Outfit& rhs) const
+    {
+        // Compare all relevant fields
+        return m_name == rhs.m_name &&
+               m_armors == rhs.m_armors &&
+               m_favorited == rhs.m_favorited;
+    }
 };
 const constexpr char* g_noOutfitName = "";
 static Outfit g_noOutfit(g_noOutfitName);// can't be const; prevents us from assigning it to Outfit&s
@@ -113,11 +77,7 @@ public:
     typedef Outfit Outfit;
     static constexpr std::uint32_t signature = 'AAOS';
     enum {
-        kSaveVersionV1 = 1,// Unsupported handwritten binary format
-        kSaveVersionV2 = 2,// Unsupported handwritten binary format
-        kSaveVersionV3 = 3,// Unsupported handwritten binary format
-        kSaveVersionV4 = 4,// First version with protobuf
-        kSaveVersionV5 = 5,// First version with Slot Control System
+        kSaveVersionV1 = 1,
     };
     //
     static constexpr std::uint32_t ce_outfitNameMaxLength = 256;// SKSE caps serialized std::strings and const char*s to 256 bytes.
@@ -156,9 +116,7 @@ public:
     std::map<cobb::istring, Outfit> outfits;
     // TODO: You probably shouldn't use an Actor pointer to refer to actors. It works for the PlayerCharacter, but likely not for NPCs.
     std::map<RE::RawActorHandle, ActorOutfitAssignments> actorOutfitAssignments;
-    // Location-based switching
-    bool locationBasedAutoSwitchEnabled = false;
-    //
+
     static ArmorAddonOverrideService& GetInstance() {
         static ArmorAddonOverrideService instance;
         return instance;
@@ -180,7 +138,6 @@ public:
     void removeActor(RE::RawActorHandle target);
     std::unordered_set<RE::RawActorHandle> listActors();
     //
-    void setLocationBasedAutoSwitchEnabled(bool) noexcept;
     void setOutfitUsingLocation(LocationType location, RE::RawActorHandle target);
     void setLocationOutfit(LocationType location, const char* name, RE::RawActorHandle target);
     void unsetLocationOutfit(LocationType location, RE::RawActorHandle target);

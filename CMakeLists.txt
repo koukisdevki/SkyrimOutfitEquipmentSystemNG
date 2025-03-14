@@ -37,6 +37,7 @@ set(headers
         include/cobb/utf8string.h
         include/ArmorAddonOverrideService.h
         include/OutfitSystem.h
+        include/Forms.h
 )
 
 set(sources
@@ -46,6 +47,7 @@ set(sources
         src/ArmorAddonOverrideService.cpp
         src/OutfitSystem.cpp
         src/Utility.cpp
+        src/Forms.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
 
 source_group(
