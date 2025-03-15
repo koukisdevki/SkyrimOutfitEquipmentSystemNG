@@ -88,6 +88,12 @@ namespace OutfitSystem {
     }
 
     void RefreshArmorForActor(RE::Actor* target) {
+        auto pc = RE::PlayerCharacter::GetSingleton();
+        if (!target->Is3DLoaded()) {
+            LOG(info, "Actor {} not loaded", target->GetName());
+            return;
+        }
+
         auto& svc = ArmorAddonOverrideService::GetInstance();
         auto& outfit = svc.currentOutfit(target);
 
