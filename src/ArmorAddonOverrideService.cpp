@@ -1,5 +1,7 @@
 #include "ArmorAddonOverrideService.h"
 
+#include "Forms.h"
+
 #ifndef SKYRIMOUTFITSYSTEMSE_INCLUDE_RE_REAUGMENTS_H
 #define SKYRIMOUTFITSYSTEMSE_INCLUDE_RE_REAUGMENTS_H
 
@@ -17,12 +19,8 @@ void _assertRead(bool result, const char* err) {
 Outfit::Outfit(const proto::Outfit& proto, const SKSE::SerializationInterface* intfc) {
     m_name = proto.name();
     for (const auto& formID : proto.armors()) {
-        RE::FormID fixedID;
-        if (intfc->ResolveFormID(formID, fixedID)) {
-            auto armor = skyrim_cast<RE::TESObjectARMO*>(RE::TESForm::LookupByID(fixedID));
-            if (armor)
-                m_armors.insert(armor);
-        }
+        RE::TESObjectARMO* armor = skyrim_cast<RE::TESObjectARMO*>(Forms::ParseFormString(formID));
+        m_armors.insert(armor);
     }
     m_favorited = proto.is_favorite();
 }
@@ -57,52 +55,57 @@ proto::Outfit Outfit::save() const {
     out.set_name(m_name);
     for (const auto& armor : m_armors) {
         if (armor)
-            out.add_armors(armor->formID);
+            out.add_armors(Forms::GetFormString(armor));
     }
     out.set_is_favorite(m_favorited);
     return out;
 }
 
 ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& data, const SKSE::SerializationInterface* intfc) {
-    // Extract data from the protobuf struct.
-    enabled = data.enabled();
-    std::map<RE::RawActorHandle, ActorOutfitAssignments> actorOutfitAssignmentsLocal;
-    auto pc = RE::PlayerCharacter::GetSingleton()->GetHandle().native_handle();
+    try {
+        // Extract data from the protobuf struct.
+        enabled = data.enabled();
+        std::map<RE::Actor*, ActorOutfitAssignments> actorOutfitAssignmentsLocal;
+        auto pc = RE::PlayerCharacter::GetSingleton();
 
-    for (const auto& actorAssn : data.actor_outfit_assignments()) {
-        // Lookup the actor
-        std::uint64_t handle;
-        RE::NiPointer<RE::Actor> actor;
-        if (!intfc->ResolveHandle(actorAssn.first, handle)) {
-            // LOG(info, fmt::format("Failed to resolve for {:d}", handle));
-            continue;
+        for (const auto& actorAssn : data.actor_outfit_assignments()) {
+            // Lookup the actor
+            std::uint64_t handle;
+            std::string actorRefFormString = actorAssn.first;
+
+            RE::Actor* actor = skyrim_cast<RE::Actor*>(Forms::ParseFormString(actorRefFormString));
+
+            auto actorRawHandle = actor->GetHandle().native_handle();
+
+            ActorOutfitAssignments assignments;
+            assignments.currentOutfitName =
+                cobb::istring(actorAssn.second.current_outfit_name().data(), actorAssn.second.current_outfit_name().size());
+            for (const auto& locOutfitData : actorAssn.second.location_based_outfits()) {
+                assignments.locationOutfits.emplace(LocationType(locOutfitData.first),
+                                                    cobb::istring(locOutfitData.second.data(),
+                                                                  locOutfitData.second.size()));
+            }
+
+            actorOutfitAssignmentsLocal[actor] = assignments;
         }
 
-        // LOG(info, fmt::format("Adding PC actor {:d}, handle {:d}", actor->formID, handle));
-
-        ActorOutfitAssignments assignments;
-        assignments.currentOutfitName =
-            cobb::istring(actorAssn.second.current_outfit_name().data(), actorAssn.second.current_outfit_name().size());
-        for (const auto& locOutfitData : actorAssn.second.location_based_outfits()) {
-            assignments.locationOutfits.emplace(LocationType(locOutfitData.first),
-                                                cobb::istring(locOutfitData.second.data(),
-                                                              locOutfitData.second.size()));
+        // if the player character is not inside, add it
+        if (actorOutfitAssignmentsLocal.count(pc) == 0) {
+            LOG(info, "PC player does NOT exists inside the protocol");
+            actorOutfitAssignmentsLocal[pc] = ActorOutfitAssignments();
         }
-        actorOutfitAssignmentsLocal[static_cast<RE::RawActorHandle>(handle)] = assignments;
-    }
+        else LOG(info, "PC player already exists inside the protocol");
 
-    // if the player character is not inside, add it
-    if (actorOutfitAssignmentsLocal.count(pc) == 0) {
-        LOG(info, "PC player does NOT exists inside the protocol");
-        actorOutfitAssignmentsLocal[pc] = ActorOutfitAssignments();
+        actorOutfitAssignments = actorOutfitAssignmentsLocal;
+        for (const auto& outfitData : data.outfits()) {
+            outfits.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(cobb::istring(outfitData.name().data(), outfitData.name().size())),
+                            std::forward_as_tuple(outfitData, intfc));
+        }
     }
-    else LOG(info, "PC player already exists inside the protocol");
-
-    actorOutfitAssignments = actorOutfitAssignmentsLocal;
-    for (const auto& outfitData : data.outfits()) {
-        outfits.emplace(std::piecewise_construct,
-                        std::forward_as_tuple(cobb::istring(outfitData.name().data(), outfitData.name().size())),
-                        std::forward_as_tuple(outfitData, intfc));
+    catch (const std::exception &e) {
+        // print the exception
+        LOG(info, "Exception initializing the armor override service, %s");
     }
 }
 
@@ -137,7 +140,7 @@ void ArmorAddonOverrideService::addOutfit(const char* name, std::vector<RE::TESO
     }
 }
 
-Outfit& ArmorAddonOverrideService::currentOutfit(RE::RawActorHandle target) {
+Outfit& ArmorAddonOverrideService::currentOutfit(RE::Actor* target) {
     if (!actorOutfitAssignments.contains(target)) return g_noOutfit;
     if (actorOutfitAssignments.at(target).currentOutfitName == g_noOutfitName) return g_noOutfit;
     auto outfit = outfits.find(actorOutfitAssignments.at(target).currentOutfitName);
@@ -213,7 +216,7 @@ void ArmorAddonOverrideService::renameOutfit(const char* oldName, const char* ne
         }
     }
 }
-void ArmorAddonOverrideService::setOutfit(const char* name, RE::RawActorHandle target) {
+void ArmorAddonOverrideService::setOutfit(const char* name, RE::Actor* target) {
     if (!actorOutfitAssignments.contains(target)) return;
     if (strcmp(name, g_noOutfitName) == 0) {
         actorOutfitAssignments.at(target).currentOutfitName = g_noOutfitName;
@@ -230,26 +233,26 @@ void ArmorAddonOverrideService::setOutfit(const char* name, RE::RawActorHandle t
     }
 }
 
-void ArmorAddonOverrideService::addActor(RE::RawActorHandle target) {
+void ArmorAddonOverrideService::addActor(RE::Actor* target) {
     if (actorOutfitAssignments.count(target) == 0)
         actorOutfitAssignments.emplace(target, ActorOutfitAssignments());
 }
 
-void ArmorAddonOverrideService::removeActor(RE::RawActorHandle target) {
-    if (target == RE::PlayerCharacter::GetSingleton()->GetHandle().native_handle())
+void ArmorAddonOverrideService::removeActor(RE::Actor* target) {
+    if (target == RE::PlayerCharacter::GetSingleton())
         return;
     actorOutfitAssignments.erase(target);
 }
 
-std::unordered_set<RE::RawActorHandle> ArmorAddonOverrideService::listActors() {
-    std::unordered_set<RE::RawActorHandle> actors;
+std::unordered_set<RE::Actor*> ArmorAddonOverrideService::listActors() {
+    std::unordered_set<RE::Actor*> actors;
     for (auto& assignment : actorOutfitAssignments) {
         actors.insert(assignment.first);
     }
     return actors;
 }
 
-void ArmorAddonOverrideService::setOutfitUsingLocation(LocationType location, RE::RawActorHandle target) {
+void ArmorAddonOverrideService::setOutfitUsingLocation(LocationType location, RE::Actor* target) {
     if (actorOutfitAssignments.count(target) == 0) {
         LOG(info, "No target found, cannot set outfit using location!");
         return;
@@ -260,7 +263,7 @@ void ArmorAddonOverrideService::setOutfitUsingLocation(LocationType location, RE
     }
 }
 
-void ArmorAddonOverrideService::setLocationOutfit(LocationType location, const char* name, RE::RawActorHandle target) {
+void ArmorAddonOverrideService::setLocationOutfit(LocationType location, const char* name, RE::Actor* target) {
     if (actorOutfitAssignments.count(target) == 0) {
         LOG(info, "No target found, cannot set location outfit!");
         return;
@@ -270,13 +273,13 @@ void ArmorAddonOverrideService::setLocationOutfit(LocationType location, const c
     }
 }
 
-void ArmorAddonOverrideService::unsetLocationOutfit(LocationType location, RE::RawActorHandle target) {
+void ArmorAddonOverrideService::unsetLocationOutfit(LocationType location, RE::Actor* target) {
     if (actorOutfitAssignments.count(target) == 0)
         return;
     actorOutfitAssignments.at(target).locationOutfits.erase(location);
 }
 
-std::optional<cobb::istring> ArmorAddonOverrideService::getLocationOutfit(LocationType location, RE::RawActorHandle target) {
+std::optional<cobb::istring> ArmorAddonOverrideService::getLocationOutfit(LocationType location, RE::Actor* target) {
     if (actorOutfitAssignments.count(target) == 0)
         return std::optional<cobb::istring>();
     ;
@@ -294,7 +297,7 @@ std::optional<cobb::istring> ArmorAddonOverrideService::getLocationOutfit(Locati
 
 std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const std::unordered_set<std::string>& keywords,
                                                                          const WeatherFlags& weather_flags,
-                                                                         RE::RawActorHandle target) {
+                                                                         RE::Actor* target) {
     if (actorOutfitAssignments.count(target) == 0)
         return std::optional<LocationType>();
 
@@ -318,7 +321,7 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
     return std::optional<LocationType>();
 }
 
-bool ArmorAddonOverrideService::shouldOverride(RE::RawActorHandle target) const noexcept {
+bool ArmorAddonOverrideService::shouldOverride(RE::Actor* target) const noexcept {
     if (!enabled)
         return false;
     if (actorOutfitAssignments.count(target) == 0)
@@ -345,8 +348,9 @@ proto::OutfitSystem ArmorAddonOverrideService::save() {
     out.set_enabled(enabled);
     for (const auto& actorAssn : actorOutfitAssignments) {
         // Store a reference to the actor
-        std::uint64_t handle;
-        handle = actorAssn.first;
+        RE::Actor* actor = actorAssn.first;
+
+        std::string actorFormString = Forms::GetFormString(actor);
 
         proto::ActorOutfitAssignment assnOut;
         assnOut.set_current_outfit_name(actorAssn.second.currentOutfitName.data(),
@@ -355,7 +359,7 @@ proto::OutfitSystem ArmorAddonOverrideService::save() {
             assnOut.mutable_location_based_outfits()
                 ->insert({static_cast<std::uint32_t>(lbo.first), std::string(lbo.second.data(), lbo.second.size())});
         }
-        out.mutable_actor_outfit_assignments()->insert({handle, assnOut});
+        out.mutable_actor_outfit_assignments()->insert({actorFormString, assnOut});
     }
     for (const auto& outfit : outfits) {
         auto newOutfit = out.add_outfits();

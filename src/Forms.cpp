@@ -1,229 +1,203 @@
-//
-// Created by Koukibyou on 3/13/2025.
-// Reference from PapyrusUtils
-//
-
 #include "Forms.h"
-
-#include <unordered_map>
-#include <functional>
 
 namespace Forms {
 
-    static std::unordered_map<std::uint32_t, std::uint32_t> s_savedModIndexMap;
+    bool IsFormString(const std::string &str) {
+        if (str.size() < 4 || str.find("|") == std::string::npos) return false;
 
-    void ClearModList() {
-        s_savedModIndexMap.clear();
+        return str.ends_with(".esp") || str.ends_with(".esm") || str.ends_with(".esl") || str.ends_with(".FF");
     }
 
-    std::uint32_t ResolveModIndex(std::uint32_t modIndex) {
-        auto it = s_savedModIndexMap.find(modIndex);
-        if (it != s_savedModIndexMap.end()) {
-            return it->second;
-        }
-        return 0xFF;
-    }
-
-    std::uint32_t GetBaseID(std::uint32_t formID) {
+    uint32_t GetBaseID(uint32_t formID) {
         if (formID == 0) return 0;
         return ((formID >> 24 == 0xFE) ? formID & 0x00000FFF : formID & 0x00FFFFFF);
     }
 
-    std::uint32_t GetBaseID(RE::TESForm* obj) {
+    uint32_t GetBaseID(RE::TESForm* obj) {
         if (!obj) return 0;
-        return ((obj->GetFormID() >> 24 == 0xFE) ? obj->GetFormID() & 0x00000FFF : obj->GetFormID() & 0x00FFFFFF);
+        return ((obj->formID >> 24 == 0xFE) ? obj->formID & 0x00000FFF : obj->formID & 0x00FFFFFF);
     }
 
-    std::uint32_t GetModIndex(std::uint32_t formID) {
-        if (formID == 0) return 0;
-        std::uint32_t modID = formID >> 24;
+    uint32_t GetModIndex(RE::TESForm* obj) {
+        if (obj->formID == 0) return 0;
+
+        uint32_t modID = obj->formID >> 24;
         if (modID == 0xFE) {
-            modID = formID >> 12;
+            modID = obj->formID >> 12;
         }
         return modID;
     }
 
-    std::uint32_t GetModIndex(RE::TESForm* obj) {
-        if (!obj || obj->GetFormID() == 0) return 0;
-
-        std::uint32_t modID = obj->GetFormID() >> 24;
-        if (modID == 0xFE) {
-            modID = obj->GetFormID() >> 12;
+    std::string GetFormString(RE::TESForm *obj) {
+        if (!obj) {
+            LOG(critical, "GetFormString called with null object");
+            return "0";
         }
-        return modID;
-    }
-
-    std::uint32_t GetModIndex(const char* name) {
-        auto dataHandler = RE::TESDataHandler::GetSingleton();
-        const auto modInfo = dataHandler->LookupModByName(name);
-        if (modInfo) {
-            return modInfo->IsLight() ?
-                (0xFE000 | modInfo->smallFileCompileIndex) :
-                modInfo->compileIndex;
-        }
-        return 0xFF;
-    }
-
-    std::uint32_t ResolveFormID(std::uint32_t formID) {
-        if (formID == 0) return 0;
-        std::uint32_t modID = formID >> 24;
-
-        if (modID == 0xFF) {
-            return formID; // FF
-        }
-        else if (modID == 0xFE) {
-            modID = formID >> 12;
-        }
-
-        std::uint32_t loadedModID = ResolveModIndex(modID);
-        if (loadedModID < 0xFF) {
-            return (formID & 0x00FFFFFF) | (((std::uint32_t)loadedModID) << 24); // ESP/ESM
-        }
-        else if (loadedModID > 0xFF) {
-            return (loadedModID << 12) | (formID & 0x00000FFF); // ESL
-        }
-
-        return 0;
-    }
-
-    RE::TESForm* ResolveFormKey(std::uint64_t key) {
-        if (key < 1) return nullptr;
-        std::uint32_t type = (std::uint32_t)(key >> 32);
-        std::uint32_t id = ResolveFormID((std::uint32_t)(key));
-        RE::TESForm* form = id <= 0 ? nullptr : RE::TESForm::LookupByID(id);
-        return form ? (type == static_cast<std::uint32_t>(form->GetFormType()) ? form : nullptr) : nullptr;
-    }
-
-    bool IsValidObject(RE::TESForm* obj, std::uint64_t formId) {
-//        LOG(info,std::format("IsValidObject(0x%X, 0x%X)", obj ? obj->GetFormID() : 0, formId));
-        if (!obj || formId == 0) return false;
-//        LOG(info,std::format("\tType: %d", static_cast<int>(obj->GetFormType()));
-        if ((std::uint32_t)(formId >> 32) != 0 && static_cast<std::uint32_t>(obj->GetFormType()) != (std::uint32_t)(formId >> 32)) return false;
-        else if ((formId & 0xFFFFFFFF) != 0 && (std::uint32_t)(formId & 0xFFFFFFFF) != obj->GetFormID()) return false;
-        else return true;
-    }
-
-    std::uint64_t GetFormKey(RE::TESForm* form) {
-        if (!form) return 0;
-        std::uint64_t key = form->GetFormID();
-        key |= ((std::uint64_t)form->GetFormType()) << 32;
-        return key;
-    }
-
-    RE::TESForm* GetFormKey(std::uint64_t key) {
-        if (key < 1) return nullptr;
-        std::uint32_t type = (std::uint32_t)(key >> 32);
-        std::uint32_t id = (std::uint32_t)(key);
-        return id != 0 ? RE::TESForm::LookupByID(id) : nullptr;
-    }
-
-    std::uint64_t GetNewKey(std::uint64_t key) {
-        if (key == 0) return 0;
-        std::uint32_t type = (std::uint32_t)(key >> 32);
-        std::uint32_t id = ResolveFormID((std::uint32_t)(key));
-        return (((std::uint64_t)type) << 32) | (std::uint64_t)id;
-    }
-
-    std::uint64_t GetNewKey(std::uint64_t key, std::string modName) {
-        // This is a placeholder since the original didn't implement this function
-        return GetNewKey(key);
-    }
-
-    bool ends_with(const std::string &str, const std::string &suffix) {
-        return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
-    }
-
-    bool IsFormString(const std::string &str) {
-        if (str.size() < 4 || str.find("|") == std::string::npos) return false;
-        else return ends_with(str, ".esp") || ends_with(str, ".esm") || ends_with(str, ".esl") || ends_with(str, ".FF");
-    }
-
-    const std::string GetFormString(RE::TESForm* obj) {
-        if (!obj) return "0";
 
         std::stringstream ss;
-        std::uint32_t id = GetBaseID(obj);
+        uint32_t id = GetBaseID(obj);
 
         // Set hex base ID
         ss << "0x" << std::hex << id << "|";
 
+        //LOG( "GetFormString processing form 0x{:X} ({})", obj->GetFormID(), obj->GetName());
+
+        RE::TESDataHandler *Data = RE::TESDataHandler::GetSingleton();
+        if (!Data) {
+            LOG(critical, "Failed to get TESDataHandler singleton");
+            return "0";
+        }
+
         // Set Mod name
-        std::uint32_t index = GetModIndex(obj);
+        uint32_t index = GetModIndex(obj);
+        //LOG( "Form mod index is 0x{:X}", index);
+
         if (index < 0xFF) {
             // esp & esm objects
-            auto dataHandler = RE::TESDataHandler::GetSingleton();
-            const auto& modInfo = dataHandler->LookupLoadedModByIndex(index);
-            if (modInfo) {
-                ss << modInfo->fileName;
+            RE::TESFile** loadedMods = Data->GetLoadedMods();
+            if (!loadedMods) {
+                LOG(critical, "Failed to get loaded mods array");
+                return "0";
             }
+
+            RE::TESFile *modInfo = loadedMods[index];
+            if (!modInfo) {
+                LOG(critical, "Null mod info for index {}", index);
+                return "0";
+            }
+
+            ss << modInfo->GetFilename();
+            //LOG( "Form belongs to ESP/ESM file: {}", modInfo->GetFilename());
         }
         else if (index > 0xFF) {
             // esl objects
-            std::uint32_t light = index & 0x00FFF;
-            auto dataHandler = RE::TESDataHandler::GetSingleton();
-            const auto& modInfo = dataHandler->LookupLoadedLightModByIndex(light);
-            if (modInfo) {
-                ss << modInfo->fileName;
+            RE::TESFile** loadedCCMods = Data->GetLoadedLightMods();
+            if (!loadedCCMods) {
+                LOG(critical, "Failed to get loaded light mods array");
+                return "0";
             }
+
+            uint32_t light = index & 0x00FFF;
+            //LOG( "Light mod index is 0x{:X}", light);
+
+            RE::TESFile *modInfo = loadedCCMods[light];
+            if (!modInfo) {
+                LOG(critical, "Null light mod info for light index {}", light);
+                return "0";
+            }
+
+            ss << modInfo->GetFilename();
+            //LOG( "Form belongs to ESL file: {}", modInfo->GetFilename());
         }
         else {
             // Temp objects - save form type as part of modname
-            ss << static_cast<int>(obj->GetFormType()) << ".FF";
+            uint8_t formType = static_cast<uint8_t>(obj->GetFormType());
+            ss << static_cast<int>(formType) << ".FF";
+            //LOG( "Form is a temporary object with form type {}", formType);
         }
 
-        return ss.str();
+        const std::string out = ss.str();
+        //LOG( "GetFormString result: {}", out);
+        return out;
     }
 
     RE::TESForm* ParseFormString(const std::string &objString) {
-        if (!IsFormString(objString)) return nullptr;
+        //LOG( "ParseFormString called with: {}", objString);
 
-        std::size_t pos = objString.find("|");
-        std::string objID = objString.substr(0, pos);
-
-        std::uint32_t obj = 0;
-        if (objString.rfind("0x", 0) == 0) {
-            obj = std::stoul(objID, nullptr, 16);
+        if (!IsFormString(objString)) {
+            LOG(critical, "Invalid form string format: {}", objString);
+            return nullptr;
         }
-        else {
-            obj = std::stoi(objID);
+
+        std::size_t pos = objString.find('|');
+        std::string objID = objString.substr(0, pos);
+        //LOG( "Extracted ID part: {}", objID);
+
+        uint32_t baseId = 0;
+        try {
+            if (objID.rfind("0x", 0) == 0) {
+                baseId = std::stoul(objID, nullptr, 16);
+            } else {
+                baseId = std::stoi(objID);
+            }
+            //LOG( "Parsed base ID: 0x{:X}", baseId);
+        } catch (const std::exception& e) {
+            LOG(critical, "Failed to parse form ID '{}': {}", objID, e.what());
+            return nullptr;
         }
 
         std::string mod = objString.substr(pos + 1);
+        //LOG( "Extracted mod part: {}", mod);
 
-        if (ends_with(objString, ".FF")) {
+        if (objString.ends_with(".FF")) {
+            //LOG( "Processing temporary form");
             // Temp objects - check form type
             mod.resize((mod.length() - 3));
-            std::uint8_t type = std::stoi(mod, nullptr, 16);
-            obj = (((std::uint32_t)0xFF) << 24) | obj;
-            RE::TESForm* objform = obj == 0 ? nullptr : RE::TESForm::LookupByID(obj);
-            if (objform && static_cast<std::uint32_t>(objform->GetFormType()) == type) return objform;
-            else {
+
+            uint8_t type;
+            try {
+                type = std::stoi(mod, nullptr, 10);
+                //LOG( "Parsed form type: {}", type);
+            } catch (const std::exception& e) {
+                LOG(critical, "Failed to parse form type '{}': {}", mod, e.what());
+                return nullptr;
+            }
+
+            uint32_t formId = (static_cast<uint32_t>(0xFF) << 24) | baseId;
+            //LOG( "Constructed temporary form ID: 0x{:X}", formId);
+
+            RE::TESForm* objform = formId == 0 ? nullptr : RE::TESForm::LookupByID(formId);
+            if (!objform) {
+                LOG(critical, "Form not found with ID 0x{:X}", formId);
+                return nullptr;
+            }
+
+            uint8_t actualType = static_cast<uint8_t>(objform->GetFormType());
+            //LOG( "Form found, expected type: {}, actual type: {}", type, actualType);
+
+            if (actualType == type) {
+                //LOG( "Form type matches, returning form 0x{:X}", formId);
+                return objform;
+            } else {
+                LOG(critical, "Form type mismatch, expected: {}, got: {}", type, actualType);
                 return nullptr;
             }
         }
-        else {
-            // esp & esm objects
-            auto dataHandler = RE::TESDataHandler::GetSingleton();
-            const auto modInfo = dataHandler->LookupModByName(mod.c_str());
 
-            if (modInfo && modInfo->recordFlags.all(RE::TESFile::RecordFlag::kActive)) {
-                if (modInfo->IsLight()) {
-                    obj = (0xFE000 | modInfo->smallFileCompileIndex) << 12 | (obj & 0xFFF);
-                } else {
-                    obj = (modInfo->compileIndex << 24) | (obj & 0xFFFFFF);
-                }
-            }
-            else {
-                return nullptr; // Couldn't find mod.
-            }
+        //LOG( "Looking up mod: {}", mod);
+        RE::TESDataHandler* dhand = RE::TESDataHandler::GetSingleton();
+        if (!dhand) {
+            LOG(critical, "Failed to get TESDataHandler singleton");
+            return nullptr;
         }
 
-        return obj == 0 ? nullptr : RE::TESForm::LookupByID(obj);
-    }
+        const RE::TESFile* modInfo = dhand->LookupModByName(mod);
+        if (!modInfo) {
+            LOG(critical, "Mod not found: {}", mod);
+            return nullptr;
+        }
 
-    int GameGetForm(int formId) {
-        if (formId == 0) return formId;
-        auto form = RE::TESForm::LookupByID(formId);
-        return form ? form->GetFormID() : 0;
+        uint32_t formId = 0;
+        // Construct form ID based on whether it's a light mod or not
+        if (modInfo->IsLight()) {
+            uint16_t smallFileIndex = modInfo->GetSmallFileCompileIndex();
+            //LOG( "Light mod (ESL), small file index: 0x{:X}", smallFileIndex);
+            formId = 0xFE000000 | (static_cast<uint32_t>(smallFileIndex) << 12) | (baseId & 0xFFF);
+        } else {
+            uint8_t compileIndex = modInfo->GetCompileIndex();
+            //LOG( "Regular mod (ESP/ESM), compile index: 0x{:X}", compileIndex);
+            formId = (static_cast<uint32_t>(compileIndex) << 24) | baseId;
+        }
+
+        //LOG(info, "Constructed full form ID: 0x{:X}", formId);
+
+        RE::TESForm* form = formId == 0 ? nullptr : RE::TESForm::LookupByID(formId);
+        if (!form) {
+            LOG(critical, "Form not found with ID 0x{:X}", formId);
+            return nullptr;
+        }
+
+        //LOG(info, "Form found: 0x{:X} ({})", formId, form->GetName());
+        return form;
     }
 }

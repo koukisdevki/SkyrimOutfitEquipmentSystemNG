@@ -89,7 +89,7 @@ namespace OutfitSystem {
 
     void RefreshArmorForActor(RE::Actor* target) {
         auto& svc = ArmorAddonOverrideService::GetInstance();
-        auto& outfit = svc.currentOutfit(target->GetHandle().native_handle());
+        auto& outfit = svc.currentOutfit(target);
 
         // Compute what should be displayed based on outfit settings
         auto displayItems = outfit.m_armors;
@@ -173,20 +173,17 @@ namespace OutfitSystem {
                                             RE::StaticFunctionTag*) {
         LogExit exitPrint("RefreshArmorForAllConfiguredActors"sv);
 
-        // Get the ActorEquipManager for equipment operations
-        auto equipManager = RE::ActorEquipManager::GetSingleton();
-        if (!equipManager) {
-            LOG(critical,"Failed to get ActorEquipManager singleton");
-            return;
+        try{
+            auto& service = ArmorAddonOverrideService::GetInstance();
+            auto actors = service.listActors();
+
+            for (auto& actor : actors) {
+                RefreshArmorForActor(actor);
+                LOG(info,"Updated outfit for actor {}, ID: {}", actor->GetName(), actor->GetFormID());
+            }
         }
-
-        auto& service = ArmorAddonOverrideService::GetInstance();
-        auto actors = service.listActors();
-
-        for (auto& actorRef : actors) {
-            auto actor = RE::Actor::LookupByHandle(actorRef).get();
-            RefreshArmorForActor(actor);
-            LOG(info,"Updated outfit for actor {}, ID: {}", actor->GetName(), actor->GetFormID());
+        catch (const std::exception& e) {
+            LOG(critical,"Failed to refresh armor for configued actors");
         }
     }
 
@@ -592,7 +589,7 @@ namespace OutfitSystem {
         if (!actor)
             return RE::BSFixedString("");
         auto& service = ArmorAddonOverrideService::GetInstance();
-        return service.currentOutfit(actor->GetHandle().native_handle()).m_name.c_str();
+        return service.currentOutfit(actor).m_name.c_str();
     }
     bool IsEnabled(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
         LogExit exitPrint("IsEnabled"sv);
@@ -739,7 +736,7 @@ namespace OutfitSystem {
         if (!actor)
             return;
         auto& service = ArmorAddonOverrideService::GetInstance();
-        service.setOutfit(name.data(), actor->GetHandle().native_handle());
+        service.setOutfit(name.data(), actor);
     }
     void AddActor(RE::BSScript::IVirtualMachine* registry,
                   std::uint32_t stackId,
@@ -747,7 +744,7 @@ namespace OutfitSystem {
                   RE::Actor* target) {
         LogExit exitPrint("AddActor"sv);
         auto& service = ArmorAddonOverrideService::GetInstance();
-        service.addActor(target->GetHandle().native_handle());
+        service.addActor(target);
     }
     void RemoveActor(RE::BSScript::IVirtualMachine* registry,
                      std::uint32_t stackId,
@@ -755,7 +752,7 @@ namespace OutfitSystem {
                      RE::Actor* target) {
         LogExit exitPrint("RemoveActor"sv);
         auto& service = ArmorAddonOverrideService::GetInstance();
-        service.removeActor(target->GetHandle().native_handle());
+        service.removeActor(target);
     }
     std::vector<RE::Actor*> ListActors(RE::BSScript::IVirtualMachine* registry,
                                        std::uint32_t stackId,
@@ -764,8 +761,7 @@ namespace OutfitSystem {
         auto& service = ArmorAddonOverrideService::GetInstance();
         auto actors = service.listActors();
         std::vector<RE::Actor*> actorVec;
-        for (auto& actorRef : actors) {
-            auto actor = RE::Actor::LookupByHandle(actorRef);
+        for (auto& actor : actors) {
             if (!actor) continue;
 #if _DEBUG
             LOG(debug, "INNER: Actor {} has refcount {}", actor->GetDisplayFullName(), actor->QRefCount());
@@ -773,7 +769,7 @@ namespace OutfitSystem {
             if (actor->QRefCount() == 1) {
                 LOG(warn, "ListActors will return an actor {} with refcount of 1. This may crash.", actor->GetDisplayFullName());
             }
-            actorVec.push_back(actor.get());
+            actorVec.push_back(actor);
         }
         std::sort(
             actorVec.begin(),
@@ -840,7 +836,7 @@ namespace OutfitSystem {
             }
             location = location->parentLoc;
         }
-        return service.checkLocationType(keywords, weather_flags, RE::PlayerCharacter::GetSingleton()->CreateRefHandle().native_handle());
+        return service.checkLocationType(keywords, weather_flags, RE::PlayerCharacter::GetSingleton());
     }
 
     std::uint32_t IdentifyLocationType(RE::BSScript::IVirtualMachine* registry,
@@ -890,7 +886,7 @@ namespace OutfitSystem {
             return;
         }
         return ArmorAddonOverrideService::GetInstance()
-            .setLocationOutfit(LocationType(location), name.data(), actor->GetHandle().native_handle());
+            .setLocationOutfit(LocationType(location), name.data(), actor);
     }
     void UnsetLocationOutfit(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*,
                              RE::Actor* actor,
@@ -899,7 +895,7 @@ namespace OutfitSystem {
         if (!actor)
             return;
         return ArmorAddonOverrideService::GetInstance()
-            .unsetLocationOutfit(LocationType(location), actor->GetHandle().native_handle());
+            .unsetLocationOutfit(LocationType(location), actor);
     }
     RE::BSFixedString GetLocationOutfit(RE::BSScript::IVirtualMachine* registry,
                                         std::uint32_t stackId,
@@ -910,7 +906,7 @@ namespace OutfitSystem {
         if (!actor)
             return RE::BSFixedString("");
         auto outfit = ArmorAddonOverrideService::GetInstance()
-                          .getLocationOutfit(LocationType(location), actor->GetHandle().native_handle());
+                          .getLocationOutfit(LocationType(location), actor);
         if (outfit.has_value()) {
             return RE::BSFixedString(outfit.value().c_str());
         } else {
@@ -920,7 +916,7 @@ namespace OutfitSystem {
     }
     bool ExportSettings(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
         LogExit exitPrint("ExportSettings"sv);
-        std::string outputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitSystemData.json";
+        std::string outputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitSystemEquipmentNGData.json";
         auto& service = ArmorAddonOverrideService::GetInstance();
         proto::OutfitSystem data = service.save();
         std::string output;
@@ -945,7 +941,7 @@ namespace OutfitSystem {
     }
     bool ImportSettings(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
         LogExit exitPrint("ImportSettings"sv);
-        std::string inputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitSystemData.json";
+        std::string inputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitSystemEquipmentNGData.json";
         std::ifstream file(inputFile);
         if (!file) {
             RE::DebugNotification("Failed to open config for reading", nullptr, false);

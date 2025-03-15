@@ -67,7 +67,7 @@ void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
     } else if (message->type == SKSE::MessagingInterface::kPostPostLoad) {
     } else if (message->type == SKSE::MessagingInterface::kDataLoaded) {
     } else if (message->type == SKSE::MessagingInterface::kNewGame) {
-        auto pc = RE::PlayerCharacter::GetSingleton()->GetHandle().native_handle();
+        auto pc = RE::PlayerCharacter::GetSingleton();
         ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
         ArmorAddonOverrideService::GetInstance().addActor(pc);
     } else if (message->type == SKSE::MessagingInterface::kPreLoadGame) {

@@ -4,7 +4,7 @@ package proto;
 
 message Outfit {
   string name = 1;
-  repeated uint32 armors = 2; // A list of formIDs that will be resolved as pointers to RE::TESObjectARMO
+  repeated string armors = 2; // A list of formIDs that will be resolved as pointers to RE::TESObjectARMO
   bool is_favorite = 3;
 }
 
@@ -16,5 +16,5 @@ message ActorOutfitAssignment {
 message OutfitSystem {
   bool enabled = 1;
   repeated Outfit outfits = 2;
-  map<uint64, ActorOutfitAssignment> actor_outfit_assignments = 3;
+  map<string, ActorOutfitAssignment> actor_outfit_assignments = 3; // <Actor RefFormID> key, matched to a ActorOutfitAssignment
 }
