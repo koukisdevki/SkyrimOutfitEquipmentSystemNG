@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include "OutfitSystem.h"
+#include "AutoOutfitSwitchService.h"
 
 #include "ArmorAddonOverrideService.h"
 #include "Utility.h"
@@ -38,7 +39,7 @@ namespace {
         log->flush_on(spdlog::level::trace);
 
         spdlog::set_default_logger(std::move(log));
-        spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
+        spdlog::set_pattern("[%H:%M:%S.%e] %g(%#): [%^%l%$] %v"s);
 
         // Load the actual log setting we should use.
         auto level = spdlog::level::info;
@@ -70,10 +71,20 @@ void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
         auto pc = RE::PlayerCharacter::GetSingleton();
         ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
         ArmorAddonOverrideService::GetInstance().addActor(pc);
+
+        // Modify the service to handle cleanup internally
+        auto& autoOutfitservice = AutoOutfitSwitchService::GetInstance();
+        autoOutfitservice.Reset();
+        autoOutfitservice.RestartMonitoring();
     } else if (message->type == SKSE::MessagingInterface::kPreLoadGame) {
         // AAOS::load resets as well, but this is needed in case the save we're about to load doesn't have any AAOS
         // data.
         ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
+    }
+    else if (message->type == SKSE::MessagingInterface::kPostLoadGame) {
+        auto& service = AutoOutfitSwitchService::GetInstance();
+        service.Reset();
+        service.RestartMonitoring();
     }
 }
 

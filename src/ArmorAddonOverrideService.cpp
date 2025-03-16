@@ -1,5 +1,7 @@
 #include "ArmorAddonOverrideService.h"
 
+#include <google/protobuf/util/json_util.h>
+
 #include "Forms.h"
 
 #ifndef SKYRIMOUTFITSYSTEMSE_INCLUDE_RE_REAUGMENTS_H
@@ -63,6 +65,13 @@ proto::Outfit Outfit::save() const {
 
 ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& data, const SKSE::SerializationInterface* intfc) {
     try {
+        std::string protoData;
+        google::protobuf::util::JsonPrintOptions options;
+        options.add_whitespace = true;
+        auto status = google::protobuf::util::MessageToJsonString(data, &protoData, options);
+
+        LOG(info, "Reading the following stored SKSE data:\n {}", protoData);
+
         // Extract data from the protobuf struct.
         enabled = data.enabled();
         std::map<RE::Actor*, ActorOutfitAssignments> actorOutfitAssignmentsLocal;
@@ -74,8 +83,6 @@ ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& 
             std::string actorRefFormString = actorAssn.first;
 
             RE::Actor* actor = skyrim_cast<RE::Actor*>(Forms::ParseFormString(actorRefFormString));
-
-            auto actorRawHandle = actor->GetHandle().native_handle();
 
             ActorOutfitAssignments assignments;
             assignments.currentOutfitName =

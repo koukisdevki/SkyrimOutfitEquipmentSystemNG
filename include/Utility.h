@@ -24,3 +24,7 @@ public:
         LOG(trace, "Exit {}", m_string);
     };
 };
+
+namespace REUtilities {
+    bool IsActorInWater(RE::Actor* actor);
+}

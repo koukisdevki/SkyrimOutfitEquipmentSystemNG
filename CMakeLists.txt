@@ -38,6 +38,7 @@ set(headers
         include/ArmorAddonOverrideService.h
         include/OutfitSystem.h
         include/Forms.h
+        include/AutoOutfitSwitchService.h
 )
 
 set(sources
@@ -48,6 +49,7 @@ set(sources
         src/OutfitSystem.cpp
         src/Utility.cpp
         src/Forms.cpp
+        src/AutoOutfitSwitchService.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
 
 source_group(

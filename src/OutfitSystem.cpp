@@ -174,9 +174,7 @@ namespace OutfitSystem {
         RefreshArmorForActor(target);
     }
 
-    void RefreshArmorForAllConfiguredActors(RE::BSScript::IVirtualMachine* registry,
-                                            std::uint32_t stackId,
-                                            RE::StaticFunctionTag*) {
+    void RefreshArmorForAllConfiguredActorsRaw() {
         LogExit exitPrint("RefreshArmorForAllConfiguredActors"sv);
 
         try{
@@ -191,6 +189,12 @@ namespace OutfitSystem {
         catch (const std::exception& e) {
             LOG(critical,"Failed to refresh armor for configued actors");
         }
+    };
+
+    void RefreshArmorForAllConfiguredActors(RE::BSScript::IVirtualMachine* registry,
+                                            std::uint32_t stackId,
+                                            RE::StaticFunctionTag*) {
+        RefreshArmorForAllConfiguredActorsRaw();
     }
 
     std::vector<RE::Actor*> ActorsNearPC(RE::BSScript::IVirtualMachine* registry,
@@ -858,8 +862,8 @@ namespace OutfitSystem {
                                                            (RE::TESWeather*) weather_skse)
                                               .value_or(LocationType::World));
     }
-    void SetOutfitsUsingLocation(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*,
-                                RE::BGSLocation* location_skse,
+
+    void SetOutfitsUsingLocationRaw(RE::BGSLocation* location_skse,
                                 RE::TESWeather* weather_skse) {
         LogExit exitPrint("SetOutfitsUsingLocation"sv);
         // NOTE: Location can be NULL.
@@ -880,6 +884,13 @@ namespace OutfitSystem {
             }
         }
     }
+
+    void SetOutfitsUsingLocation(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*,
+                                RE::BGSLocation* location_skse,
+                                RE::TESWeather* weather_skse) {
+        SetOutfitsUsingLocationRaw(location_skse, weather_skse);
+    }
+
     void SetLocationOutfit(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*,
                            RE::Actor* actor,
                            std::uint32_t location,

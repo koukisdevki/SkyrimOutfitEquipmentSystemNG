@@ -69,3 +69,12 @@ INIReader* Settings::Instance() {
     if (!settings) settings = new Settings();
     return &settings->reader;
 }
+
+bool REUtilities::IsActorInWater(RE::Actor* a_actor) {
+    if (!a_actor) {
+        LOG(info, "Actor is None");
+        return false;
+    }
+
+    return a_actor->IsInWater();
+}
