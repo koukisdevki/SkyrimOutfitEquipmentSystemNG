@@ -77,10 +77,14 @@ void AutoOutfitSwitchService::MonitorThreadFunc() {
 void AutoOutfitSwitchService::Reset() {
     auto player = RE::PlayerCharacter::GetSingleton();
     if (player) {
+        lastGameDayPart = REUtilities::CurrentGameDayPart();
         lastLocation = player->GetCurrentLocation();
         lastWeather = RE::Sky::GetSingleton()->currentWeather;
-        lastInWaterStatus = REUtilities::IsActorInWater(player);
+        lastInCombatStatus = player->IsInCombat();
+        lastInWaterStatus = player->IsInWater();
+        lastSleepingStatus = REUtilities::IsActorSleeping(player);
         lastSwimmingStatus = player->AsActorState()->IsSwimming();
+        lastOnMountStatus = player->IsOnMount();
     }
 }
 
@@ -114,8 +118,30 @@ void AutoOutfitSwitchService::CheckForChanges() {
         return; // Return to prevent multiple updates in the same check
     }
 
+    // Check day part time changes
+    const auto currentDayPart = REUtilities::CurrentGameDayPart();
+    if (currentDayPart != lastGameDayPart) {
+        std::string dayPartString = (currentDayPart == GameDayPart::Day) ? "Day" : "Night";
+        UpdateOutfits("Day time changed to " + dayPartString);
+        lastGameDayPart = currentDayPart;
+        return;
+    }
+
+    // Actions
+    // Most common first, to least common but in actuality the priority is
+    // Horse riding -> Swimming -> Sleeping -> In water -> In combat
+
+    // Check combat status
+    const bool currentlyInCombat = player->IsInCombat();
+    if (currentlyInCombat != lastInCombatStatus) {
+        message = currentlyInCombat ? "Now in combat" : "No longer in combat";
+        UpdateOutfits(message);
+        lastInCombatStatus = currentlyInCombat;
+        return;
+    }
+
     // Check in water status
-    const bool currentlyInWater = REUtilities::IsActorInWater(player);
+    const bool currentlyInWater = player->IsInWater();
     if (currentlyInWater != lastInWaterStatus) {
         message = currentlyInWater ? "Now in water" : "No longer in water";
         UpdateOutfits(message);
@@ -129,6 +155,25 @@ void AutoOutfitSwitchService::CheckForChanges() {
         message = currentSwimming ? "Started swimming" : "Stopped swimming";
         UpdateOutfits(message);
         lastSwimmingStatus = currentSwimming;
+        return;
+    }
+
+    // Check sleeping status
+    const bool currentlySleeping = REUtilities::IsActorSleeping(player);
+    if (currentlySleeping != lastSleepingStatus) {
+        message = currentlySleeping ? "Started sleeping" : "Stopped sleeping";
+        UpdateOutfits(message);
+        lastSleepingStatus = currentlySleeping;
+        return;
+    }
+
+    // Check mounting status
+    const bool currentlyOnMount = player->IsOnMount();
+    if (currentlyOnMount != lastOnMountStatus) {
+        message = currentlyOnMount ? "Now on mount" : "No longer on mount";
+        UpdateOutfits(message);
+        lastOnMountStatus = currentlyOnMount;
+        return;
     }
 }
 

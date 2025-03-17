@@ -25,6 +25,23 @@ public:
     };
 };
 
+enum class GameDayPart : uint8_t {
+    Day = 0,
+    Night = 1,
+};
+
+struct GameTime {
+    int hour;    // 0-23
+    int minute;  // 0-59
+
+    // Equality operator
+    bool operator==(const GameTime& other) const {
+        return hour == other.hour && minute == other.minute;
+    }
+};
+
 namespace REUtilities {
-    bool IsActorInWater(RE::Actor* actor);
+    bool IsActorSleeping(RE::Actor* actor);
+    GameTime CurrentGameHour();
+    GameDayPart CurrentGameDayPart();
 }

@@ -70,11 +70,41 @@ INIReader* Settings::Instance() {
     return &settings->reader;
 }
 
-bool REUtilities::IsActorInWater(RE::Actor* a_actor) {
+bool REUtilities::IsActorSleeping(RE::Actor* a_actor) {
     if (!a_actor) {
         LOG(info, "Actor is None");
         return false;
     }
 
-    return a_actor->IsInWater();
+    RE::ActorState* actorState = a_actor->AsActorState();
+
+    RE::SIT_SLEEP_STATE sleepState = actorState->GetSitSleepState();
+
+    return sleepState >= RE::SIT_SLEEP_STATE::kIsSleeping && sleepState <= RE::SIT_SLEEP_STATE::kWantToWake;
+}
+
+GameDayPart REUtilities::CurrentGameDayPart() {
+    GameTime gameTime = CurrentGameHour();
+    return (gameTime.hour >= 6 && gameTime.hour < 20) ? GameDayPart::Day : GameDayPart::Night;
+}
+
+GameTime REUtilities::CurrentGameHour() {
+    GameTime result = {0, 0};
+
+    auto calendar = RE::Calendar::GetSingleton();
+    if (!calendar) {
+        LOG(critical, "Failed to get Calendar singleton");
+        throw std::runtime_error("Failed to get Calendar singleton");
+    }
+
+    // Get the hour as float (0.0-23.999...)
+    float gameHourFloat = calendar->GetHour();
+
+    // Extract integer hour and minute
+    result.hour = static_cast<int>(gameHourFloat);
+
+    // Fix: Explicitly cast result.hour to float before subtraction
+    result.minute = static_cast<int>((gameHourFloat - static_cast<float>(result.hour)) * 60.0f);
+
+    return result;
 }

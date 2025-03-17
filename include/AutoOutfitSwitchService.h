@@ -6,6 +6,7 @@
 
 #ifndef AUTOOUTFITSWITCHSERVICE_H
 #define AUTOOUTFITSWITCHSERVICE_H
+#include <Utility.h>
 
 #endif //AUTOOUTFITSWITCHSERVICE_H
 
@@ -59,8 +60,12 @@ private:
 
     RE::TESWeather* lastWeather = nullptr;
     RE::BGSLocation* lastLocation = nullptr;
-    bool lastSwimmingStatus = false;
+    GameDayPart lastGameDayPart;
+    bool lastInCombatStatus = false;
     bool lastInWaterStatus = false;
+    bool lastSleepingStatus = false;
+    bool lastSwimmingStatus = false;
+    bool lastOnMountStatus = false;
 
     std::string GetWeatherName(RE::TESWeather* weather);
     void MonitorThreadFunc();
