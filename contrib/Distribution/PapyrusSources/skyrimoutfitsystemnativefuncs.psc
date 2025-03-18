@@ -87,7 +87,9 @@ Bool     Function OutfitExists      (String asOutfitName) Global Native
          Function RemoveActor (Actor akSubject) Global Native
 Actor[]  Function ListActors() Global Native
 
-Int[]    Function GetAutoSwitchLocationArray () Global Native
+Int[]    Function GetAutoSwitchGenericLocationArray () Global Native
+Int[]    Function GetAutoSwitchSpecificLocationArray () Global Native
+Int[]    Function GetAutoSwitchActionBasedLocationArray () Global Native
 Int      Function IdentifyLocationType (Location alLocation, Weather awWeather) Global Native
          Function SetOutfitsUsingLocation (Location alLocation, Weather awWeather) Global Native
          Function SetLocationOutfit (Actor actor, Int aiLocationType, String asOutfitName) Global Native

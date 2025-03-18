@@ -88,9 +88,11 @@ ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& 
             assignments.currentOutfitName =
                 cobb::istring(actorAssn.second.current_outfit_name().data(), actorAssn.second.current_outfit_name().size());
             for (const auto& locOutfitData : actorAssn.second.location_based_outfits()) {
-                assignments.locationOutfits.emplace(LocationType(locOutfitData.first),
-                                                    cobb::istring(locOutfitData.second.data(),
-                                                                  locOutfitData.second.size()));
+                assignments.locationOutfits.emplace(
+                    static_cast<LocationType>(locOutfitData.first),
+                    cobb::istring(locOutfitData.second.data(),
+                    locOutfitData.second.size())
+                );
             }
 
             actorOutfitAssignmentsLocal[actor] = assignments;
@@ -304,28 +306,58 @@ std::optional<cobb::istring> ArmorAddonOverrideService::getLocationOutfit(Locati
 
 std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const std::unordered_set<std::string>& keywords,
                                                                          const WeatherFlags& weather_flags,
+                                                                         const GameDayPart& day_part,
                                                                          RE::Actor* target) {
     if (actorOutfitAssignments.count(target) == 0)
-        return std::optional<LocationType>();
+        return {};
 
-    CHECK_LOCATION(CitySnowy, keywords.count("LocTypeCity") && weather_flags.snowy);
-    CHECK_LOCATION(CityRainy, keywords.count("LocTypeCity") && weather_flags.rainy);
+    RE::TESObjectCELL* cell = target->GetParentCell();
+    bool inInterior = false;
+
+    if (target->Is3DLoaded() && cell) {
+        inInterior = cell->IsInteriorCell();
+
+        // Action based location
+        CHECK_LOCATION(Mounting, target->IsOnMount());
+        CHECK_LOCATION(Swimming, target->AsActorState()->IsSwimming());
+        CHECK_LOCATION(Sleeping, REUtilities::IsActorSleeping(target));
+        CHECK_LOCATION(InWater, target->IsInWater());
+        CHECK_LOCATION(Combat, target->IsInCombat());
+    } else return LocationType::World;
+
+    //Specific locations
+    CHECK_LOCATION(PlayerHome, keywords.count("LocTypePlayerHouse"));
+    CHECK_LOCATION(Castle, keywords.count("LocTypeCastle") || keywords.count("LocTypeMilitaryFort"));
+    CHECK_LOCATION(Temple, keywords.count("LocTypeTemple"));
+    CHECK_LOCATION(GuildHall, keywords.count("LocTypeGuild"));
+    CHECK_LOCATION(Jail, keywords.count("LocTypeJail"));
+    CHECK_LOCATION(Farm, keywords.count("LocTypeFarm") || keywords.count("LocTypeLumberMill"));
+    CHECK_LOCATION(Military, keywords.count("LocTypeMilitaryCamp") || keywords.count("LocTypeBarracks"));
+    CHECK_LOCATION(Inn, keywords.count("LocTypeInn"));
+    CHECK_LOCATION(Store, keywords.count("LocTypeStore"));
+    CHECK_LOCATION(Dungeon, keywords.count("LocTypeDungeon"));
+
+    // Generic Locations
+    CHECK_LOCATION(CityInterior, keywords.count("LocTypeCity") && inInterior);
+    CHECK_LOCATION(CitySnow, keywords.count("LocTypeCity") && weather_flags.snowy);
+    CHECK_LOCATION(CityRain, keywords.count("LocTypeCity") && weather_flags.rainy);
+    CHECK_LOCATION(CityNight, keywords.count("LocTypeCity") && day_part == GameDayPart::Night);
     CHECK_LOCATION(City, keywords.count("LocTypeCity"));
 
     // A city is considered a town, so it will use the town outfit unless a city one is selected.
-    CHECK_LOCATION(TownSnowy, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && weather_flags.snowy);
-    CHECK_LOCATION(TownRainy, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && weather_flags.rainy);
+    CHECK_LOCATION(TownInterior, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && inInterior);
+    CHECK_LOCATION(TownSnow, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && weather_flags.snowy);
+    CHECK_LOCATION(TownRain, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && weather_flags.rainy);
+    CHECK_LOCATION(TownNight, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && day_part == GameDayPart::Night);
     CHECK_LOCATION(Town, keywords.count("LocTypeTown") + keywords.count("LocTypeCity"));
 
-    CHECK_LOCATION(DungeonSnowy, keywords.count("LocTypeDungeon") && weather_flags.snowy);
-    CHECK_LOCATION(DungeonRainy, keywords.count("LocTypeDungeon") && weather_flags.rainy);
-    CHECK_LOCATION(Dungeon, keywords.count("LocTypeDungeon"));
-
-    CHECK_LOCATION(WorldSnowy, weather_flags.snowy);
-    CHECK_LOCATION(WorldRainy, weather_flags.rainy);
+    CHECK_LOCATION(WorldInterior, inInterior);
+    CHECK_LOCATION(WorldSnow, weather_flags.snowy);
+    CHECK_LOCATION(WorldRain, weather_flags.rainy);
+    CHECK_LOCATION(WorldNight, day_part == GameDayPart::Night);
     CHECK_LOCATION(World, true);
 
-    return std::optional<LocationType>();
+    return {};
 }
 
 bool ArmorAddonOverrideService::shouldOverride(RE::Actor* target) const noexcept {
@@ -362,9 +394,12 @@ proto::OutfitSystem ArmorAddonOverrideService::save() {
         proto::ActorOutfitAssignment assnOut;
         assnOut.set_current_outfit_name(actorAssn.second.currentOutfitName.data(),
                                         actorAssn.second.currentOutfitName.size());
-        for (const auto& lbo : actorAssn.second.locationOutfits) {
+        for (const auto& locationBasedOutfit : actorAssn.second.locationOutfits) {
             assnOut.mutable_location_based_outfits()
-                ->insert({static_cast<std::uint32_t>(lbo.first), std::string(lbo.second.data(), lbo.second.size())});
+                ->insert({
+                    static_cast<std::uint32_t>(locationBasedOutfit.first),
+                    std::string(locationBasedOutfit.second.data(), locationBasedOutfit.second.size())
+                });
         }
         out.mutable_actor_outfit_assignments()->insert({actorFormString, assnOut});
     }

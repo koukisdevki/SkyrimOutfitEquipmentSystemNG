@@ -794,28 +794,75 @@ namespace OutfitSystem {
 #endif
         return actorVec;
     }
-    std::vector<std::uint32_t> GetAutoSwitchLocationArray(RE::BSScript::IVirtualMachine* registry,
-                                                          std::uint32_t stackId,
-                                                          RE::StaticFunctionTag*) {
+
+    std::vector<std::uint32_t> GetAutoSwitchGenericLocationArray(RE::BSScript::IVirtualMachine* registry,
+                                                      std::uint32_t stackId,
+                                                      RE::StaticFunctionTag*) {
         LogExit exitPrint("GetAutoSwitchLocationArray"sv);
         std::vector<std::uint32_t> result;
         for (LocationType i : {
-                 LocationType::World,
-                 LocationType::WorldSnowy,
-                 LocationType::WorldRainy,
-                 LocationType::City,
-                 LocationType::CitySnowy,
-                 LocationType::CityRainy,
-                 LocationType::Town,
-                 LocationType::TownSnowy,
-                 LocationType::TownRainy,
-                 LocationType::Dungeon,
-                 LocationType::DungeonSnowy,
-                 LocationType::DungeonRainy}) {
-            result.push_back(std::uint32_t(i));
+             LocationType::World,
+             LocationType::WorldNight,
+             LocationType::WorldSnow,
+             LocationType::WorldRain,
+             LocationType::WorldInterior,
+
+             LocationType::Town,
+             LocationType::TownNight,
+             LocationType::TownSnow,
+             LocationType::TownRain,
+             LocationType::TownInterior,
+
+             LocationType::City,
+             LocationType::CityNight,
+             LocationType::CitySnow,
+             LocationType::CityRain,
+             LocationType::CityInterior,
+        }) {
+            result.push_back(static_cast<std::uint32_t>(i));
         }
         return result;
     }
+
+    std::vector<std::uint32_t> GetAutoSwitchSpecificLocationArray(RE::BSScript::IVirtualMachine* registry,
+                                                      std::uint32_t stackId,
+                                                      RE::StaticFunctionTag*) {
+        LogExit exitPrint("GetAutoSwitchLocationArray"sv);
+        std::vector<std::uint32_t> result;
+        for (LocationType i : {
+                 LocationType::Dungeon,
+                 LocationType::PlayerHome,
+                 LocationType::Inn,
+                 LocationType::Store,
+                 LocationType::GuildHall,
+                 LocationType::Castle,
+                 LocationType::Temple,
+                 LocationType::Farm,
+                 LocationType::Jail,
+                 LocationType::Military
+        }) {
+            result.push_back(static_cast<std::uint32_t>(i));
+        }
+        return result;
+    }
+
+    std::vector<std::uint32_t> GetAutoSwitchActionBasedLocationArray(RE::BSScript::IVirtualMachine* registry,
+                                                      std::uint32_t stackId,
+                                                      RE::StaticFunctionTag*) {
+        LogExit exitPrint("GetAutoSwitchLocationArray"sv);
+        std::vector<std::uint32_t> result;
+        for (LocationType i : {
+            LocationType::Combat,
+            LocationType::InWater,
+            LocationType::Sleeping,
+            LocationType::Swimming,
+            LocationType::Mounting,
+        }) {
+            result.push_back(static_cast<std::uint32_t>(i));
+        }
+        return result;
+    }
+
     std::optional<LocationType> identifyLocation(RE::BGSLocation* location, RE::TESWeather* weather) {
         LogExit exitPrint("identifyLocation"sv);
         // Just a helper function to classify a location.
@@ -846,7 +893,8 @@ namespace OutfitSystem {
             }
             location = location->parentLoc;
         }
-        return service.checkLocationType(keywords, weather_flags, RE::PlayerCharacter::GetSingleton());
+
+        return service.checkLocationType(keywords, weather_flags, REUtilities::CurrentGameDayPart(), RE::PlayerCharacter::GetSingleton());
     }
 
     std::uint32_t IdentifyLocationType(RE::BSScript::IVirtualMachine* registry,
@@ -1160,9 +1208,17 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "SkyrimOutfitSystemNativeFuncs",
         ListActors);
     registry->RegisterFunction(
-        "GetAutoSwitchLocationArray",
+        "GetAutoSwitchGenericLocationArray",
         "SkyrimOutfitSystemNativeFuncs",
-        GetAutoSwitchLocationArray);
+        GetAutoSwitchGenericLocationArray);
+    registry->RegisterFunction(
+        "GetAutoSwitchSpecificLocationArray",
+        "SkyrimOutfitSystemNativeFuncs",
+        GetAutoSwitchSpecificLocationArray);
+    registry->RegisterFunction(
+        "GetAutoSwitchActionBasedLocationArray",
+        "SkyrimOutfitSystemNativeFuncs",
+        GetAutoSwitchActionBasedLocationArray);
     registry->RegisterFunction(
         "IdentifyLocationType",
         "SkyrimOutfitSystemNativeFuncs",

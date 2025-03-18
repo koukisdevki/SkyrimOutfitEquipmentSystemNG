@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Utility.h"
 #include "cobb/strings.h"
 #include "outfit.pb.h"
 
@@ -21,20 +22,44 @@ namespace RE {
 }
 
 enum class LocationType : std::uint32_t {
+    // pairs of 100
+    // Generic Locations
     World = 0,
-    Town = 1,
-    Dungeon = 2,
-    City = 9,
+    WorldNight = 100,
+    WorldSnow = 200,
+    WorldRain = 300,
+    WorldInterior = 400,
 
-    WorldSnowy = 3,
-    TownSnowy = 4,
-    DungeonSnowy = 5,
-    CitySnowy = 10,
+    Town = 500,
+    TownNight = 600,
+    TownSnow = 700,
+    TownRain = 800,
+    TownInterior = 900,
 
-    WorldRainy = 6,
-    TownRainy = 7,
-    DungeonRainy = 8,
-    CityRainy = 11
+    City = 1000,
+    CityNight = 1100,
+    CitySnow = 1200,
+    CityRain = 1300,
+    CityInterior = 1400,
+
+    // While on an action
+    Combat = 1500,
+    InWater = 1600,
+    Sleeping = 1700,
+    Swimming = 1800,
+    Mounting = 1900,
+
+    // Specific Locations
+    Dungeon = 5500,
+    PlayerHome = 5600,
+    Inn = 5700,
+    Store = 5800,
+    GuildHall = 5900,
+    Castle = 6000,
+    Temple = 6100,
+    Farm = 6200,
+    Jail = 6300,
+    Military = 6400,
 };
 
 struct WeatherFlags {
@@ -141,7 +166,7 @@ public:
     void setLocationOutfit(LocationType location, const char* name, RE::Actor* target);
     void unsetLocationOutfit(LocationType location, RE::Actor* target);
     std::optional<cobb::istring> getLocationOutfit(LocationType location, RE::Actor* target);
-    std::optional<LocationType> checkLocationType(const std::unordered_set<std::string>& keywords, const WeatherFlags& weather_flags, RE::Actor* target);
+    std::optional<LocationType> checkLocationType(const std::unordered_set<std::string>& keywords, const WeatherFlags& weather_flags, const GameDayPart& day_part, RE::Actor* target);
     //
     bool shouldOverride(RE::Actor* target) const noexcept;
     void getOutfitNames(std::vector<std::string>& out, bool favoritesOnly = false) const;

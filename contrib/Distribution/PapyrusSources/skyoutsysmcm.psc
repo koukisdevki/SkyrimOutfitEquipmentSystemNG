@@ -27,6 +27,22 @@ Armor[]  _kOutfitEditor_AddFromListCandidates
 String   _sOutfitEditor_AddFromList_Filter   = ""
 Bool     _bOutfitEditor_AddFromList_Playable = True
 
+Function AddLocationOptions(Int[] aiIndices, String sHeaderKey)
+   AddHeaderOption(sHeaderKey)
+   
+   Int iCount = aiIndices.Length
+   Int iIterator = 0
+   
+   While iIterator < iCount
+       String sLocationOutfit = SkyrimOutfitSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, aiIndices[iIterator])
+       If sLocationOutfit == ""
+           sLocationOutfit = "$SkyOutSys_AutoswitchEdit_None"
+       EndIf
+       AddMenuOptionST("OPT_AutoswitchEntry" + aiIndices[iIterator], "$SkyOutSys_Text_Autoswitch" + aiIndices[iIterator], sLocationOutfit)
+       iIterator = iIterator + 1
+   EndWhile
+EndFunction
+
 Int Function GetModVersion() Global ; static method; therefore, safely callable by outside parties even before/during OnInit
 	Return 0x01000000
 EndFunction
@@ -180,7 +196,6 @@ EndFunction
    Event OnMenuOpenST()
       String sState = GetState()
       If StringUtil.Substring(sState, 0, 19) == "OPT_AutoswitchEntry"
-         Int iQuickslotIndex = StringUtil.Substring(sState, 19) as Int
          String[] sMenu = PrependStringToArray(_sOutfitNames, "$SkyOutSys_AutoswitchEdit_None")
          sMenu = PrependStringToArray(sMenu, "$SkyOutSys_AutoswitchEdit_Cancel")
          SetMenuDialogOptions(sMenu)
@@ -273,19 +288,9 @@ EndFunction
       ;/Block/; ; Right column
          SetCursorPosition(1)
 
-         AddHeaderOption("$SkyOutSys_MCMHeader_Autoswitch")
-         Int[] iIndices = SkyrimOutfitSystemNativeFuncs.GetAutoSwitchLocationArray()
-         Int iCount = iIndices.Length
-
-         Int iIterator = 0
-         While iIterator < iCount
-            String sLocationOutfit = SkyrimOutfitSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, iIndices[iIterator])
-            If sLocationOutfit == ""
-               sLocationOutfit = "$SkyOutSys_AutoswitchEdit_None"
-            EndIf
-            AddMenuOptionST("OPT_AutoswitchEntry" + iIndices[iIterator], "$SkyOutSys_Text_Autoswitch" + iIndices[iIterator], sLocationOutfit)
-            iIterator = iIterator + 1
-         EndWhile
+         AddLocationOptions(SkyrimOutfitSystemNativeFuncs.GetAutoSwitchActionBasedLocationArray(), "$SkyOutSys_MCMHeader_Autoswitch_Action")
+         AddLocationOptions(SkyrimOutfitSystemNativeFuncs.GetAutoSwitchGenericLocationArray(), "$SkyOutSys_MCMHeader_Autoswitch_Generic") 
+         AddLocationOptions(SkyrimOutfitSystemNativeFuncs.GetAutoSwitchSpecificLocationArray(), "$SkyOutSys_MCMHeader_Autoswitch_Specific")
       ;/EndBlock/;
 
    EndFunction
