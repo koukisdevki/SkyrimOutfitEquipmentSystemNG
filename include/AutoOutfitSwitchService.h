@@ -28,6 +28,14 @@ enum class WEAPON_STATE : std::uint32_t
     kSheathing = 5
 };
 
+struct ActorActionStatusTracker {
+    bool lastInCombatStatus = false;
+    bool lastInWaterStatus = false;
+    bool lastSleepingStatus = false;
+    bool lastSwimmingStatus = false;
+    bool lastOnMountStatus = false;
+};
+
 class AutoOutfitSwitchService {
 public:
     static AutoOutfitSwitchService& GetInstance() {
@@ -58,14 +66,11 @@ private:
     std::thread monitorThread;
     std::atomic<bool> threadRunning{false};
 
+    std::map<RE::Actor*, ActorActionStatusTracker> actorStatusTrackers;
+
     RE::TESWeather* lastWeather = nullptr;
     RE::BGSLocation* lastLocation = nullptr;
     GameDayPart lastGameDayPart;
-    bool lastInCombatStatus = false;
-    bool lastInWaterStatus = false;
-    bool lastSleepingStatus = false;
-    bool lastSwimmingStatus = false;
-    bool lastOnMountStatus = false;
 
     std::string GetWeatherName(RE::TESWeather* weather);
     void MonitorThreadFunc();

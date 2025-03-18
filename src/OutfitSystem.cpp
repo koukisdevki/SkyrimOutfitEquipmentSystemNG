@@ -863,7 +863,7 @@ namespace OutfitSystem {
         return result;
     }
 
-    std::optional<LocationType> identifyLocation(RE::BGSLocation* location, RE::TESWeather* weather) {
+    std::optional<LocationType> identifyLocation(RE::BGSLocation* location, RE::TESWeather* weather, RE::Actor* target) {
         LogExit exitPrint("identifyLocation"sv);
         // Just a helper function to classify a location.
         // TODO: Think of a better place than this since we're not exposing it to Papyrus.
@@ -894,21 +894,19 @@ namespace OutfitSystem {
             location = location->parentLoc;
         }
 
-        return service.checkLocationType(keywords, weather_flags, REUtilities::CurrentGameDayPart(), RE::PlayerCharacter::GetSingleton());
+        return service.checkLocationType(keywords, weather_flags, REUtilities::CurrentGameDayPart(), target);
     }
 
     std::uint32_t IdentifyLocationType(RE::BSScript::IVirtualMachine* registry,
                                        std::uint32_t stackId,
                                        RE::StaticFunctionTag*,
-
                                        RE::BGSLocation* location_skse,
-                                       RE::TESWeather* weather_skse) {
+                                       RE::TESWeather* weather_skse,
+                                       RE::Actor* target) {
         LogExit exitPrint("IdentifyLocationType"sv);
         // NOTE: Identify the location for Papyrus. In the event no location is identified, we lie to Papyrus and say "World".
         //       Therefore, Papyrus cannot assume that locations returned have an outfit assigned, at least not for "World".
-        return static_cast<std::uint32_t>(identifyLocation((RE::BGSLocation*) location_skse,
-                                                           (RE::TESWeather*) weather_skse)
-                                              .value_or(LocationType::World));
+        return static_cast<std::uint32_t>(identifyLocation(location_skse,weather_skse, target).value_or(LocationType::World));
     }
 
     void SetOutfitsUsingLocationRaw(RE::BGSLocation* location_skse,
@@ -919,7 +917,7 @@ namespace OutfitSystem {
         auto actors = service.listActors();
 
         for (auto& actor : actors) {
-            auto location = identifyLocation(location_skse, weather_skse);
+            auto location = identifyLocation(location_skse, weather_skse, actor);
             // Debug notifications for location classification.
             /*
             const char* locationName = locationTypeStrings[static_cast<std::uint32_t>(location)];

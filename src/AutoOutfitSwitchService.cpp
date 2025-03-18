@@ -4,6 +4,7 @@
 
 // AutoOutfitSwitchService.cpp
 #include "AutoOutfitSwitchService.h"
+#include "ArmorAddonOverrideService.h"
 
 #include <Utility.h>
 
@@ -75,16 +76,42 @@ void AutoOutfitSwitchService::MonitorThreadFunc() {
 }
 
 void AutoOutfitSwitchService::Reset() {
+    // Clear current trackers
+    actorStatusTrackers.clear();
+
+    // Get the list of all actors
+    auto& overrideService = ArmorAddonOverrideService::GetInstance();
+    auto actors = overrideService.listActors();
+
+    // Initialize tracker for each actor
+    for (auto* actor : actors) {
+        if (actor && actor->Is3DLoaded()) {
+            ActorActionStatusTracker tracker;
+            tracker.lastInCombatStatus = actor->IsInCombat();
+            tracker.lastInWaterStatus = actor->IsInWater();
+            tracker.lastSleepingStatus = REUtilities::IsActorSleeping(actor);
+            tracker.lastSwimmingStatus = actor->AsActorState()->IsSwimming();
+            tracker.lastOnMountStatus = actor->IsOnMount();
+
+            actorStatusTrackers[actor] = tracker;
+        } else {
+            ActorActionStatusTracker tracker;
+            tracker.lastInCombatStatus = false;
+            tracker.lastInWaterStatus = false;
+            tracker.lastSleepingStatus = false;
+            tracker.lastSwimmingStatus = false;
+            tracker.lastOnMountStatus = false;
+
+            actorStatusTrackers[actor] = tracker;
+        }
+    }
+
+    // Track environment info
+    lastGameDayPart = REUtilities::CurrentGameDayPart();
+    lastWeather = RE::Sky::GetSingleton()->currentWeather;
     auto player = RE::PlayerCharacter::GetSingleton();
     if (player) {
-        lastGameDayPart = REUtilities::CurrentGameDayPart();
         lastLocation = player->GetCurrentLocation();
-        lastWeather = RE::Sky::GetSingleton()->currentWeather;
-        lastInCombatStatus = player->IsInCombat();
-        lastInWaterStatus = player->IsInWater();
-        lastSleepingStatus = REUtilities::IsActorSleeping(player);
-        lastSwimmingStatus = player->AsActorState()->IsSwimming();
-        lastOnMountStatus = player->IsOnMount();
     }
 }
 
@@ -93,87 +120,93 @@ void AutoOutfitSwitchService::CheckForChanges() {
         return;
     }
 
+    // First check global environment changes
     auto player = RE::PlayerCharacter::GetSingleton();
-    if (!player) {
-        return;
+    if (player) {
+        std::string message;
+
+        // Check location changes
+        const auto currentLocation = player->GetCurrentLocation();
+        if (currentLocation != lastLocation) {
+            std::string locationName = currentLocation && currentLocation->GetFullName() ?
+                currentLocation->GetFullName() : "Unknown Location";
+            UpdateOutfits("Location changed to " + locationName);
+            lastLocation = currentLocation;
+            return; // Return to prevent multiple updates in the same check
+        }
+
+        // Check weather changes
+        const auto currentWeather = RE::Sky::GetSingleton()->currentWeather;
+        if (currentWeather != lastWeather && currentWeather) {
+            UpdateOutfits("Weather changed to " + GetWeatherName(currentWeather));
+            lastWeather = currentWeather;
+            return; // Return to prevent multiple updates in the same check
+        }
+
+        // Check day part time changes
+        const auto currentDayPart = REUtilities::CurrentGameDayPart();
+        if (currentDayPart != lastGameDayPart) {
+            std::string dayPartString = (currentDayPart == GameDayPart::Day) ? "Day" : "Night";
+            UpdateOutfits("Day time changed to " + dayPartString);
+            lastGameDayPart = currentDayPart;
+            return;
+        }
     }
 
-    std::string message;
+    // Then check individual actor state changes
+    for (auto& [actor, tracker] : actorStatusTrackers) {
+        if (!actor || !actor->Is3DLoaded()) continue;
 
-    // Check location changes
-    const auto currentLocation = player->GetCurrentLocation();
-    if (currentLocation != lastLocation) {
-        std::string locationName = currentLocation && currentLocation->GetFullName() ?
-            currentLocation->GetFullName() : "Unknown Location";
-        UpdateOutfits("Location changed to " + locationName);
-        lastLocation = currentLocation;
-        return; // Return to prevent multiple updates in the same check
-    }
+        std::string actorName = actor->GetName();
+        if (actorName.empty()) {
+            actorName = "Unnamed Actor";
+        }
+        std::string message;
 
-    // Check weather changes
-    const auto currentWeather = RE::Sky::GetSingleton()->currentWeather;
-    if (currentWeather != lastWeather && currentWeather) {
-        UpdateOutfits("Weather changed to " + GetWeatherName(currentWeather));
-        lastWeather = currentWeather;
-        return; // Return to prevent multiple updates in the same check
-    }
+        // Check combat status
+        const bool currentlyInCombat = actor->IsInCombat();
+        if (currentlyInCombat != tracker.lastInCombatStatus) {
+            message = actorName + (currentlyInCombat ? " now in combat" : " no longer in combat");
+            UpdateOutfits(message);
+            tracker.lastInCombatStatus = currentlyInCombat;
+            return;
+        }
 
-    // Check day part time changes
-    const auto currentDayPart = REUtilities::CurrentGameDayPart();
-    if (currentDayPart != lastGameDayPart) {
-        std::string dayPartString = (currentDayPart == GameDayPart::Day) ? "Day" : "Night";
-        UpdateOutfits("Day time changed to " + dayPartString);
-        lastGameDayPart = currentDayPart;
-        return;
-    }
+        // Check in water status
+        const bool currentlyInWater = actor->IsInWater();
+        if (currentlyInWater != tracker.lastInWaterStatus) {
+            message = actorName + (currentlyInWater ? " now in water" : " no longer in water");
+            UpdateOutfits(message);
+            tracker.lastInWaterStatus = currentlyInWater;
+            return;
+        }
 
-    // Actions
-    // Most common first, to least common but in actuality the priority is
-    // Horse riding -> Swimming -> Sleeping -> In water -> In combat
+        // Check swimming status
+        const bool currentSwimming = actor->AsActorState()->IsSwimming();
+        if (currentSwimming != tracker.lastSwimmingStatus) {
+            message = actorName + (currentSwimming ? " started swimming" : " stopped swimming");
+            UpdateOutfits(message);
+            tracker.lastSwimmingStatus = currentSwimming;
+            return;
+        }
 
-    // Check combat status
-    const bool currentlyInCombat = player->IsInCombat();
-    if (currentlyInCombat != lastInCombatStatus) {
-        message = currentlyInCombat ? "Now in combat" : "No longer in combat";
-        UpdateOutfits(message);
-        lastInCombatStatus = currentlyInCombat;
-        return;
-    }
+        // Check sleeping status
+        const bool currentlySleeping = REUtilities::IsActorSleeping(actor);
+        if (currentlySleeping != tracker.lastSleepingStatus) {
+            message = actorName + (currentlySleeping ? " started sleeping" : " stopped sleeping");
+            UpdateOutfits(message);
+            tracker.lastSleepingStatus = currentlySleeping;
+            return;
+        }
 
-    // Check in water status
-    const bool currentlyInWater = player->IsInWater();
-    if (currentlyInWater != lastInWaterStatus) {
-        message = currentlyInWater ? "Now in water" : "No longer in water";
-        UpdateOutfits(message);
-        lastInWaterStatus = currentlyInWater;
-        return;
-    }
-
-    // Check swimming status
-    const bool currentSwimming = player->AsActorState()->IsSwimming();
-    if (currentSwimming != lastSwimmingStatus) {
-        message = currentSwimming ? "Started swimming" : "Stopped swimming";
-        UpdateOutfits(message);
-        lastSwimmingStatus = currentSwimming;
-        return;
-    }
-
-    // Check sleeping status
-    const bool currentlySleeping = REUtilities::IsActorSleeping(player);
-    if (currentlySleeping != lastSleepingStatus) {
-        message = currentlySleeping ? "Started sleeping" : "Stopped sleeping";
-        UpdateOutfits(message);
-        lastSleepingStatus = currentlySleeping;
-        return;
-    }
-
-    // Check mounting status
-    const bool currentlyOnMount = player->IsOnMount();
-    if (currentlyOnMount != lastOnMountStatus) {
-        message = currentlyOnMount ? "Now on mount" : "No longer on mount";
-        UpdateOutfits(message);
-        lastOnMountStatus = currentlyOnMount;
-        return;
+        // Check mounting status
+        const bool currentlyOnMount = actor->IsOnMount();
+        if (currentlyOnMount != tracker.lastOnMountStatus) {
+            message = actorName + (currentlyOnMount ? " now on mount" : " no longer on mount");
+            UpdateOutfits(message);
+            tracker.lastOnMountStatus = currentlyOnMount;
+            return;
+        }
     }
 }
 

@@ -308,13 +308,14 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
                                                                          const WeatherFlags& weather_flags,
                                                                          const GameDayPart& day_part,
                                                                          RE::Actor* target) {
-    if (actorOutfitAssignments.count(target) == 0)
+    // target must be loaded, and assigned
+    if (actorOutfitAssignments.count(target) == 0 || !target->Is3DLoaded())
         return {};
 
     RE::TESObjectCELL* cell = target->GetParentCell();
     bool inInterior = false;
 
-    if (target->Is3DLoaded() && cell) {
+    if (cell) {
         inInterior = cell->IsInteriorCell();
 
         // Action based location
