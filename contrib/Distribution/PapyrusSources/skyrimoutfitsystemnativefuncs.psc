@@ -97,3 +97,9 @@ Int      Function IdentifyLocationType (Location alLocation, Weather awWeather, 
 String   Function GetLocationOutfit (Actor actor, Int aiLocationType) Global Native
 Bool     Function ExportSettings () Global Native
 Bool     Function ImportSettings () Global Native
+
+Int Function GetAllLoadedModsCount () Global Native
+String[] Function GetAllLoadedModsPaginatedList (Int page) Global Native
+
+Int Function GetAllLoadedOutfitsForModCount (String modName) Global Native
+String[] Function GetAllLoadedOutfitsForModPaginatedList (String modName, Int page) Global Native
