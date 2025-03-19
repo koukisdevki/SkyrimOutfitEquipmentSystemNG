@@ -309,7 +309,7 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
                                                                          const GameDayPart& day_part,
                                                                          RE::Actor* target) {
     // target must be loaded, and assigned
-    if (actorOutfitAssignments.count(target) == 0 || !target->Is3DLoaded())
+    if (actorOutfitAssignments.count(target) == 0 || !target || !target->Is3DLoaded())
         return {};
 
     RE::TESObjectCELL* cell = target->GetParentCell();
