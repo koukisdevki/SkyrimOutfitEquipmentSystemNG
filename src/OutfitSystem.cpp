@@ -697,6 +697,7 @@ namespace OutfitSystem {
                         userMods.push_back(entry);
 
                         LOG(info, "Regular mod: {}", entry.filename);
+                        LOG(info, "Done processing: {}, Load order {}", filename, regularMods[i]->GetCompileIndex());
                     }
 
                     LOG(info, "Done processing: {}", filename);
@@ -738,9 +739,19 @@ namespace OutfitSystem {
 
                     LOG(info, "Checking if mod file has a correct filename, and printable");
 
-                    // Check first character directly to avoid undefined behavior with IsPrintableString
-                    if (!*filenamePtr) {  // Check if it's an empty string
-                        LOG(info, "Empty filename detected");
+                    // Instead of dereferencing it directly, use a safer approach
+                    bool isValidString = false;
+                    try {
+                        // Try to create a string with limited length
+                        std::string test(filenamePtr, 0, 1);  // Just try to read the first character
+                        isValidString = true;
+                    }
+                    catch (...) {
+                        LOG(info, "Invalid filename memory detected");
+                        isValidString = false;
+                    }
+
+                    if (!isValidString) {
                         break;
                     }
 
@@ -789,7 +800,7 @@ namespace OutfitSystem {
                     LOG(info, "Light mod: {}", entry.filename);
                 }
 
-                LOG(info, "Done processing: {}", filename);
+                LOG(info, "Done processing: {}, Load order {}", filename, (*lightMod)->GetSmallFileCompileIndex());
 
                 ++lightMod;
             }

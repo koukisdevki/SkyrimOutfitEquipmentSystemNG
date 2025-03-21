@@ -2,7 +2,7 @@ Scriptname SkyOutSysMCM extends SKI_ConfigBase Hidden
 
 Int      _iOutfitBrowserPage   = 0
 Int      _iOutfitNameMaxBytes = 256 ; should never change at run-time; can change if the DLL is revised appropriately
-Int _OutfitsPageMaxOutfits = 60
+Int _OutfitsPageMaxOutfits = 20
 String[] _sOutfitNames
 String   _sSelectedOutfit = ""
 
@@ -912,7 +912,11 @@ EndFunction
             sMenu[0] = "$SkyOutSys_OEdit_AddCancel"
             
             ; Set Load All Outfits option
-            sMenu[1] = "$SkyOutSys_OEdit_LoadAllOutfits"
+            If totalOutfits > 0
+               sMenu[1] = "$SkyOutSys_OEdit_LoadAllOutfits"
+            Else 
+               sMenu[1] = "$SkyOutSys_OEdit_NoOutfitsToLoad"
+            EndIf 
             
             ; Current position in the menu array
             Int menuIndex = 2
