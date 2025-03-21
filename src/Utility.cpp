@@ -108,3 +108,63 @@ GameTime REUtilities::CurrentGameHour() {
 
     return result;
 }
+
+// Utility function for random number generation
+int REUtilities::GetRandomInt(int min, int max) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distr(min, max);
+    return distr(gen);
+}
+
+void REUtilities::ProcessArmorLeveledListEntry(const RE::LEVELED_OBJECT* entry, std::vector<RE::TESObjectARMO*>& outArmors, std::uint16_t playerLevel) {
+    if (!entry || !entry->form) {
+        return;
+    }
+
+    // Process based on quantity
+    for (std::uint16_t i = 0; i < entry->count; i++) {
+        // If it's an armor, add it directly
+        if (entry->form->IsArmor()) {
+            RE::TESObjectARMO* armor = entry->form->As<RE::TESObjectARMO>();
+            if (armor) {
+                outArmors.push_back(armor);
+            }
+        }
+        // If it's another leveled list, process it recursively
+        else if (entry->form->Is(RE::FormType::LeveledItem)) {
+            ResolveArmorLeveledList(entry->form->As<RE::TESLevItem>(), outArmors, playerLevel);
+        }
+    }
+}
+
+// Helper function to resolve armors from a leveled list
+void REUtilities::ResolveArmorLeveledList(RE::TESLevItem* levItem, std::vector<RE::TESObjectARMO*>& outArmors, std::uint16_t playerLevel) {
+    if (!levItem) {
+        return;
+    }
+
+    // Check chanceNone - chance that nothing is selected
+    std::uint8_t chanceNone = levItem->GetChanceNone();
+    if (chanceNone > 0) {
+        // If roll is less than or equal to chanceNone, return nothing
+        if (GetRandomInt(1, 100) <= chanceNone) {
+            return;
+        }
+    }
+
+    // Check if the "Use All" flag is set
+    bool useAll = (levItem->llFlags & RE::TESLeveledList::Flag::kUseAll) != 0;
+
+    // If "Use All" flag is set, process all valid entries
+    if (useAll) {
+        for (auto i = 0; i < levItem->entries.size(); i++)  {
+            ProcessArmorLeveledListEntry(&levItem->entries[i], outArmors, playerLevel);
+        }
+    }
+    // Otherwise, select one random entry
+    else {
+        int selectedIndex = GetRandomInt(0, static_cast<int>(levItem->entries.size()) - 1);
+        ProcessArmorLeveledListEntry(&levItem->entries[selectedIndex], outArmors, playerLevel);
+    }
+}

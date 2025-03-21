@@ -661,7 +661,7 @@ namespace OutfitSystem {
             std::uint32_t regularModCount = dataHandler->GetLoadedModCount();
             auto* regularMods = dataHandler->GetLoadedMods();
 
-            // LOG(info, "Total regular mods count: {}", regularModCount);
+            LOG(info, "Total regular mods count: {}", regularModCount);
 
             for (std::uint32_t i = 0; i < regularModCount; ++i) {
                 if (regularMods[i]) {
@@ -675,10 +675,10 @@ namespace OutfitSystem {
                         entry.filePtr = regularMods[i];
                         userMods.push_back(entry);
 
-                        // LOG(info, "Regular mod: {}", entry.filename);
+                        LOG(info, "Regular mod: {}", entry.filename);
                     }
 
-                    // LOG(info, "Done processing: {}", filename);
+                    LOG(info, "Done processing: {}", filename);
                 }
             }
 
@@ -700,10 +700,10 @@ namespace OutfitSystem {
                     entry.loadOrderIndex = (*lightMod)->GetSmallFileCompileIndex();
                     entry.filePtr = *lightMod;
                     userMods.push_back(entry);
-                    // LOG(info, "Light mod: {}", entry.filename);
+                    LOG(info, "Light mod: {}", entry.filename);
                 }
 
-                // LOG(info, "Done processing: {}", filename);
+                LOG(info, "Done processing: {}", filename);
 
                 ++lightMod;
             }
@@ -717,12 +717,12 @@ namespace OutfitSystem {
             for (const auto& mod : userMods) {
                 g_cachedModList.push_back(mod.filename);
                 g_cachedModMap[mod.filename] = mod;
-                // LOG(info, "End result mod: {}", mod.filename);
+                LOG(info, "End result mod: {}", mod.filename);
             }
 
             g_isModListCached = true;
             g_cachedModCount = static_cast<uint32_t>(g_cachedModList.size());
-            // LOG(info, "Total mod count: {}", g_cachedModCount);
+            LOG(info, "Total mod count: {}", g_cachedModCount);
         }
 
         // New function to get outfits for a specific mod
@@ -1059,14 +1059,44 @@ namespace OutfitSystem {
 
         std::vector<RE::TESObjectARMO*> outfitArmors;
 
-        for (const auto& outfitArmor : outfit->second->outfitItems) {
-            RE::TESObjectARMO* armor = static_cast<RE::TESObjectARMO*>(outfitArmor);
-            outfitArmors.emplace_back(armor);
+        // Iterate through outfit items and resolve them
+        for (const auto& outfitItem : outfit->second->outfitItems) {
+            // If the item is a leveled list, resolve its armors
+            if (outfitItem->Is(RE::FormType::LeveledItem)) {
+                // Cast to TESLevItem
+                RE::TESLevItem* levItem = outfitItem->As<RE::TESLevItem>();
+                if (levItem) {
+                    // Iterate through the leveled list entries
+                    for (const auto& outfitItem : outfit->second->outfitItems) {
+                        // If the item is a leveled list, resolve its armors
+                        if (outfitItem->Is(RE::FormType::LeveledItem)) {
+                            RE::TESLevItem* levItem = outfitItem->As<RE::TESLevItem>();
+                            if (levItem) {
+                                // Get player level - you may need to adjust how you get this
+                                std::uint16_t playerLevel = RE::PlayerCharacter::GetSingleton()->GetLevel();
+                                REUtilities::ResolveArmorLeveledList(levItem, outfitArmors, playerLevel);
+                            }
+                        }
+                        // If the item is an armor, add it directly
+                        else if (outfitItem->IsArmor()) {
+                            RE::TESObjectARMO* armor = outfitItem->As<RE::TESObjectARMO>();
+                            if (armor) {
+                                outfitArmors.push_back(armor);
+                            }
+                        }
+                    }
+                }
+            }
+            // If the item is an armor, add it directly
+            else if (outfitItem->IsArmor()) {
+                RE::TESObjectARMO* armor = outfitItem->As<RE::TESObjectARMO>();
+                if (armor) {
+                    outfitArmors.push_back(armor);
+                }
+            }
         }
 
         try {
-
-
             OverwriteOutfit(registry, stackId, nullptr, outfit->first, outfitArmors);
             return 1;
         }
