@@ -104,3 +104,4 @@ String[] Function GetAllLoadedModsPaginatedList (Int page) Global Native
 Int Function GetAllLoadedOutfitsForModCount (String modName) Global Native
 String[] Function GetAllLoadedOutfitsForModPaginatedList (String modName, Int page) Global Native
 Int Function AddOutfitFromModToOutfitList(String modName, String formEditorID) Global Native
+Int Function AddAllOutfitsFromModToOutfitList(String modName) Global Native

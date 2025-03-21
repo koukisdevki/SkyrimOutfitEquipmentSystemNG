@@ -28,20 +28,24 @@ String   _sOutfitEditor_AddFromList_Filter   = ""
 Bool     _bOutfitEditor_AddFromList_Playable = True
 
 Int _iModsPerPage = 124
+Int _iOutfitsForModPerPage = 124
+
+; global, set on config open
 Int _iTotalMods = 0
 Int _iTotalModPages = 0
+
+; reset on config open
 Int      _OutfitImportModPage   = 1
 String[] _sOutfitImporter_AddModCandidates
 String _sOutfitImporter_SelectedMod = ""
-Int _iOutfitImporter_HeaderOptionCount
+Int _iOutfitImporter_HeaderOptionCount = 0
 
 
-Int _iOutfitsForModPerPage = 124
 Int _iTotalOutfitsForMod = 0
 Int _iTotalOutfitForModPages = 0
 Int      _OutfitImportOutfitsForModPage   = 1
 String[] _sOutfitImporter_AddOutfitsForModCandidate
-Int _iOutfitForModImporter_HeaderOptionCount
+Int _iOutfitForModImporter_HeaderOptionCount = 0
 
 
 Function AddLocationOptions(Int[] aiIndices, String sHeaderKey)
@@ -130,6 +134,20 @@ Event OnPageReset(String asPage)
    EndIf
 EndEvent
 
+Function InitReset()
+   _OutfitImportModPage   = 1
+   _sOutfitImporter_AddModCandidates = new String[1]
+   _sOutfitImporter_SelectedMod = ""
+   _iOutfitImporter_HeaderOptionCount = 0
+   
+   
+   _iTotalOutfitsForMod = 0
+   _iTotalOutfitForModPages = 0
+   _OutfitImportOutfitsForModPage   = 1
+   _sOutfitImporter_AddOutfitsForModCandidate = new String[1]
+   _iOutfitForModImporter_HeaderOptionCount = 0
+EndFunction
+
 Function FullRefresh()
    ResetOutfitBrowser()
    ResetOutfitEditor()
@@ -142,6 +160,8 @@ Function RefreshCache()
    _sSelectedOutfit = SkyrimOutfitSystemNativeFuncs.GetSelectedOutfit(_aCurrentActor)
    ;
    _sOutfitNames = SkyrimOutfitSystemNativeFuncs.NaturalSort_ASCII(_sOutfitNames)
+
+
 EndFunction
 
 Function ResetOutfitBrowser()
@@ -742,34 +762,37 @@ EndFunction
              
              String[] sMenu = new String[1]
              sMenu[0] = "$SkyOutSys_OEdit_AddCancel" ; First option is always cancel
+             
+             ; Add the "Load All Outfits" option as the second item
+             sMenu = PushString(sMenu, "$SkyOutSys_OEdit_LoadAllOutfits")
          
              ; Add navigation buttons conditionally
              Bool hasPrevPage = (_OutfitImportOutfitsForModPage > 1)
              Bool hasNextPage = (_OutfitImportOutfitsForModPage < _iTotalOutfitForModPages)
              
              ; Track how many navigation options we added (for index calculation later)
-             Int navOptionsCount = 0
+             Int navOptionsCount = 1 ; Start with 1 for the "Load All Outfits" option
              
              ; Add Previous Page button only if we're not on the first page
              If hasPrevPage
-                sMenu = PushString(sMenu, "$SkyOutSys_MCMText_PrevPageOption") ; Previous page
-                navOptionsCount += 1
+                 sMenu = PushString(sMenu, "$SkyOutSys_MCMText_PrevPageOption") ; Previous page
+                 navOptionsCount += 1
              EndIf
              
              ; Add Next Page button only if we're not on the last page
              If hasNextPage
-                sMenu = PushString(sMenu, "$SkyOutSys_MCMText_NextPageOption") ; Next page
-                navOptionsCount += 1
+                 sMenu = PushString(sMenu, "$SkyOutSys_MCMText_NextPageOption") ; Next page
+                 navOptionsCount += 1
              EndIf
              
-             ; Store the number of navigation options (cancel + prev/next) for later reference
+             ; Store the number of navigation options (cancel + load all + prev/next) for later reference
              Int headerOptionsCount = 1 + navOptionsCount
              
              ; Add all outfit entries
              Int i = 0
              While i < _sOutfitImporter_AddOutfitsForModCandidate.Length
-                sMenu = PushString(sMenu, _sOutfitImporter_AddOutfitsForModCandidate[i])
-                i += 1
+                 sMenu = PushString(sMenu, _sOutfitImporter_AddOutfitsForModCandidate[i])
+                 i += 1
              EndWhile
        
              ; Set the menu options
@@ -788,48 +811,63 @@ EndFunction
              
              ; Handle user selection
              If aiIndex == 0 ; Cancel option
-                _sOutfitImporter_AddOutfitsForModCandidate = new String[1]
-                Return
+                 _sOutfitImporter_AddOutfitsForModCandidate = new String[1]
+                 Return
+             EndIf
+             
+             ; Check if "Load All Outfits" option was selected (index 1)
+             If aiIndex == 1
+                 ; Use the native function to add all outfits from the mod
+                 Int addedCount = SkyrimOutfitSystemNativeFuncs.AddAllOutfitsFromModToOutfitList(_sOutfitImporter_SelectedMod)
+                 
+                 If addedCount > 0
+                     ShowMessage("$SkyOutSys_OContext_ImportAllOutfitsFromMod_Success{" + addedCount + "}{" + _sOutfitImporter_SelectedMod + "}", False, "$SkyOutSys_MessageDismiss")
+                     FullRefresh()
+                 Else
+                     ShowMessage("$SkyOutSys_OContext_ImportAllOutfitsFromMod_Failure{" + _sOutfitImporter_SelectedMod + "}", False, "$SkyOutSys_MessageDismiss")
+                 EndIf
+                 
+                 _sOutfitImporter_AddOutfitsForModCandidate = new String[1]
+                 Return
              EndIf
              
              ; Handle navigation options
-             Int navOffset = 1 ; Start with 1 to account for the Cancel option
+             Int navOffset = 2 ; Start with 2 to account for Cancel and Load All options
              
              ; Check if Previous Page was selected
              If hasPrevPage && aiIndex == navOffset
-                _OutfitImportOutfitsForModPage -= 1
-                SetMenuDialogOptions(new String[1]) ; Force menu to reopen
-                ShowMessage("$SkyOutSys_MCMText_PrevPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
-                Return
+                 _OutfitImportOutfitsForModPage -= 1
+                 SetMenuDialogOptions(new String[1]) ; Force menu to reopen
+                 ShowMessage("$SkyOutSys_MCMText_PrevPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+                 Return
              EndIf
              navOffset += hasPrevPage as Int ; Move offset if we have a prev button
              
              ; Check if Next Page was selected
              If hasNextPage && aiIndex == navOffset
-                _OutfitImportOutfitsForModPage += 1
-                SetMenuDialogOptions(new String[1]) ; Force menu to reopen
-                ShowMessage("$SkyOutSys_MCMText_NextPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
-                Return
+                 _OutfitImportOutfitsForModPage += 1
+                 SetMenuDialogOptions(new String[1]) ; Force menu to reopen
+                 ShowMessage("$SkyOutSys_MCMText_NextPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+                 Return
              EndIf
              
              ; If we get here, an outfit was selected - adjust index to account for the header options
              Int outfitIndex = aiIndex - _iOutfitForModImporter_HeaderOptionCount
              Int OutfitAddStatus = 0
              String SelectedOutfitEditorFormID = ""
-
+     
              If outfitIndex >= 0 && outfitIndex < _sOutfitImporter_AddOutfitsForModCandidate.Length
-                ; Here you would handle the selected outfit
-                ; For now, just setting a value to show selection
-                SelectedOutfitEditorFormID = _sOutfitImporter_AddOutfitsForModCandidate[outfitIndex]
-                SetMenuOptionValueST(SelectedOutfitEditorFormID)
-                OutfitAddStatus = SkyrimOutfitSystemNativeFuncs.AddOutfitFromModToOutfitList(_sOutfitImporter_SelectedMod, SelectedOutfitEditorFormID)
-                
-                If OutfitAddStatus == 1
-                  ShowMessage("$SkyOutSys_OContext_ImportOutfitsFromMod_Success{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutSys_MessageDismiss")
-                  FullRefresh()
-                Else 
-                  ShowMessage("$SkyOutSys_OContext_ImportOutfitsFromMod_Failure{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutSys_MessageDismiss")
-                EndIf
+                 ; Here handle the selected outfit
+                 SelectedOutfitEditorFormID = _sOutfitImporter_AddOutfitsForModCandidate[outfitIndex]
+                 SetMenuOptionValueST(SelectedOutfitEditorFormID)
+                 OutfitAddStatus = SkyrimOutfitSystemNativeFuncs.AddOutfitFromModToOutfitList(_sOutfitImporter_SelectedMod, SelectedOutfitEditorFormID)
+                 
+                 If OutfitAddStatus == 1
+                     ShowMessage("$SkyOutSys_OContext_ImportOutfitsFromMod_Success{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutSys_MessageDismiss")
+                     FullRefresh()
+                 Else 
+                     ShowMessage("$SkyOutSys_OContext_ImportOutfitsFromMod_Failure{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutSys_MessageDismiss")
+                 EndIf
              EndIf
              
              ; Clear the candidates list when we're done
@@ -839,9 +877,9 @@ EndFunction
          Event OnHighlightST()                        
              ; Add page info to the highlight text
              If _sOutfitImporter_SelectedMod == ""
-               SetInfoText("$SkyOutSys_OContext_ImportOutfitsFromMod")
+                 SetInfoText("$SkyOutSys_OContext_ImportOutfitsFromMod")
              Else 
-               SetInfoText("$SkyOutSys_OContext_ImportOutfitsFromModHighlight{" + _sOutfitImporter_SelectedMod + "}{"+ _OutfitImportOutfitsForModPage + "}{" + _iTotalOutfitForModPages + "}{"+ _iTotalOutfitsForMod + "}")
+                 SetInfoText("$SkyOutSys_OContext_ImportOutfitsFromModHighlight{" + _sOutfitImporter_SelectedMod + "}{"+ _OutfitImportOutfitsForModPage + "}{" + _iTotalOutfitForModPages + "}{"+ _iTotalOutfitsForMod + "}")
              EndIf
          EndEvent
      EndState

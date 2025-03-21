@@ -640,7 +640,25 @@ namespace OutfitSystem {
         std::unordered_map<std::string, ModEntryInfo> g_cachedModMap;
         std::vector<std::string> g_cachedModList;
         bool g_isModListCached = false;
-        uint32_t g_cachedModCount = 0;
+
+        // Helper function to validate if a string pointer contains printable content
+        bool IsPrintableString(const char* str, size_t maxLen) {
+            if (!str) return false;
+
+            size_t len = 0;
+            while (*str && len < maxLen) {
+                // Check if character is in printable ASCII range or common control chars
+                if ((*str < 0x20 || *str > 0x7E) && *str != '\t' && *str != '\n' && *str != '\r') {
+                    return false;
+                }
+                str++;
+                len++;
+            }
+
+            // Either we hit null terminator or reached max length
+            // A valid string should be null-terminated before maxLen
+            return *str == '\0' || len < maxLen;
+        }
 
         void CacheAllLoadedMods() {
             g_cachedModList.clear();
@@ -650,7 +668,6 @@ namespace OutfitSystem {
             if (!dataHandler) {
                 // LOG(warn, "DataHandler is null");
                 g_isModListCached = true;
-                g_cachedModCount = 0;
                 return;
             }
 
@@ -685,9 +702,31 @@ namespace OutfitSystem {
             // Process light mods
             auto* lightMod = dataHandler->GetLoadedLightMods();
             while (lightMod && *lightMod) {
-                std::string filename = std::string((*lightMod)->GetFilename());
+                std::string filename;
+                try {
+                    // Check if the pointer is valid before dereferencing
+                    if (!*lightMod) {
+                        LOG(info, "Encountered null mod pointer");
+                        break;
+                    }
+
+                    // Additional check - try to safely access fileName field
+                    // If fileName is accessible but garbage, limit the string length
+                    const char* filenamePtr = (*lightMod)->fileName;
+                    if (!filenamePtr || !IsPrintableString(filenamePtr, MAX_PATH)) {
+                        LOG(info, "Non-printable filename detected, likely invalid TESFile");
+                        break;
+                    }
+
+                    filename = std::string((*lightMod)->GetFilename());
+                }
+                catch (const std::exception& e) {
+                    LOG(info, "Failed to get mod: {}", e.what());
+                    break;  // Breaking out of the loop on exception is safer
+                }
 
                 if (filename.empty() || filename == "nEndState") {
+                    LOG(info, "Found end of all light mods.");
                     break;
                 }
 
@@ -708,6 +747,8 @@ namespace OutfitSystem {
                 ++lightMod;
             }
 
+            LOG(info, "Done with both regular and light mods.");
+
             std::sort(userMods.begin(), userMods.end(),
                 [](const ModEntryInfo& a, const ModEntryInfo& b) {
                     return a.loadOrderIndex > b.loadOrderIndex;
@@ -717,12 +758,11 @@ namespace OutfitSystem {
             for (const auto& mod : userMods) {
                 g_cachedModList.push_back(mod.filename);
                 g_cachedModMap[mod.filename] = mod;
-                LOG(info, "End result mod: {}", mod.filename);
+                // LOG(info, "End result mod: {}", mod.filename);
             }
 
             g_isModListCached = true;
-            g_cachedModCount = static_cast<uint32_t>(g_cachedModList.size());
-            LOG(info, "Total mod count: {}", g_cachedModCount);
+            LOG(info, "Total mod count: {}", g_cachedModList.size());
         }
 
         // New function to get outfits for a specific mod
@@ -792,7 +832,7 @@ namespace OutfitSystem {
         if (!g_isModListCached) {
             CacheAllLoadedMods();
         }
-        return g_cachedModCount;
+        return g_cachedModList.size();
     }
 
     // Paginated list function now uses the cache
@@ -811,12 +851,12 @@ namespace OutfitSystem {
         }
 
         // If no user mods found, return empty list
-        if (g_cachedModCount == 0) {
+        if (g_cachedModList.empty()) {
             return result;
         }
 
         // Calculate pagination
-        const std::uint32_t totalPages = (g_cachedModCount + MODS_PER_PAGE - 1) / MODS_PER_PAGE;
+        const std::uint32_t totalPages = (g_cachedModList.size() + MODS_PER_PAGE - 1) / MODS_PER_PAGE;
 
         // Validate page number
         if (page < 1) {
@@ -827,7 +867,7 @@ namespace OutfitSystem {
 
         // Calculate start and end indices for the requested page
         const std::uint32_t startIdx = (page - 1) * MODS_PER_PAGE;
-        const std::uint32_t endIdx = std::min(startIdx + MODS_PER_PAGE, g_cachedModCount);
+        const std::uint32_t endIdx = std::min(startIdx + MODS_PER_PAGE, static_cast<std::uint32_t>(g_cachedModList.size()));
 
         // Add mods for the current page from cache
         result.reserve(endIdx - startIdx);
@@ -1046,8 +1086,18 @@ namespace OutfitSystem {
 
         auto modIt = g_cachedModMap.find(modName);
 
-        if (modIt == g_cachedModMap.end() || modIt->second.outfitsMap.empty()) {
+        if (modIt == g_cachedModMap.end()) {
             return 0;
+        }
+
+        if (modIt->second.outfitsMap.empty()) {
+            // load up outfits
+            auto outfits = GetOutfitsForMod(modName);
+
+            if (outfits.empty() || modIt->second.outfitsMap.empty()) {
+                LOG(critical, "Failed to load any outfits for {}", modName);
+                return 0;
+            }
         }
 
         // Get outfits for this mod
@@ -1104,6 +1154,65 @@ namespace OutfitSystem {
             LOG(critical, "Failed to add outfit {} from mod {}", formEditorID, modName);
             return 0;
         }
+    }
+
+    // Function to add all outfits from a mod to the outfit list
+    // Returns the total number of outfits added
+    uint32_t AddAllOutfitsFromModToOutfitList(RE::BSScript::IVirtualMachine* registry,
+                          std::uint32_t stackId,
+                          RE::StaticFunctionTag*,
+                          std::string modName)
+    {
+        // Ensure mod list is cached
+        if (!g_isModListCached) {
+            CacheAllLoadedMods();
+        }
+
+        auto modIt = g_cachedModMap.find(modName);
+
+        if (modIt == g_cachedModMap.end()) {
+            LOG(critical, "Could not find mod {} in cached mod map", modName);
+            return 0;
+        }
+
+        if (modIt->second.outfitsMap.empty()) {
+            // load up outfits
+            auto outfits = GetOutfitsForMod(modName);
+
+            if (outfits.empty() || modIt->second.outfitsMap.empty()) {
+                LOG(critical, "Cannot add all outfits, failed to load any outfits for {}", modName);
+                return 0;
+            }
+        }
+
+        unordered_map<string, RE::BGSOutfit*> outfitMap = modIt->second.outfitsMap;
+        uint32_t addedCount = 0;
+
+        // Iterate through all outfits in the mod
+        for (const auto& [formEditorID, outfitPtr] : outfitMap) {
+            // Skip if outfit is null
+            if (!outfitPtr) {
+                LOG(critical, "Skipping null outfit with formEditorID: {}", formEditorID);
+                continue;
+            }
+
+            // Call the existing function to add each outfit
+            uint32_t result = AddOutfitFromModToOutfitList(registry, stackId, nullptr, modName, formEditorID);
+
+            // If result equal to or above 1, the outfit was successfully added
+            if (result >= 1) {
+                addedCount++;
+                LOG(critical,"Successfully added outfit {} from mod {}", formEditorID, modName);
+            }
+            else {
+                LOG(critical,"Failed to add outfit {} from mod {}", formEditorID, modName);
+            }
+        }
+
+        LOG(info,"Added {} outfits to {}.", addedCount, modName);
+
+        // Return the number of outfits successfully added
+        return addedCount;
     }
 
     void SetEnabled(RE::BSScript::IVirtualMachine* registry,
@@ -1642,6 +1751,9 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "AddOutfitFromModToOutfitList",
         "SkyrimOutfitSystemNativeFuncs",
         AddOutfitFromModToOutfitList);
-
+    registry->RegisterFunction(
+            "AddAllOutfitsFromModToOutfitList",
+            "SkyrimOutfitSystemNativeFuncs",
+            AddAllOutfitsFromModToOutfitList);
     return true;
 }
