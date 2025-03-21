@@ -544,6 +544,7 @@ namespace OutfitSystem {
             return;
         }
     }
+
     void DeleteOutfit(RE::BSScript::IVirtualMachine* registry,
                       std::uint32_t stackId,
                       RE::StaticFunctionTag*,
@@ -633,6 +634,7 @@ namespace OutfitSystem {
             std::string filename;
             uint32_t loadOrderIndex;
             RE::TESFile* filePtr; // Add file pointer
+            std::unordered_map<std::string, RE::BGSOutfit*> outfitsMap;
         };
 
         std::unordered_map<std::string, ModEntryInfo> g_cachedModMap;
@@ -675,6 +677,8 @@ namespace OutfitSystem {
 
                         // LOG(info, "Regular mod: {}", entry.filename);
                     }
+
+                    // LOG(info, "Done processing: {}", filename);
                 }
             }
 
@@ -683,10 +687,12 @@ namespace OutfitSystem {
             while (lightMod && *lightMod) {
                 std::string filename = std::string((*lightMod)->GetFilename());
 
+                if (filename.empty() || filename == "nEndState") {
+                    break;
+                }
+
                 // Skip empty, excluded, and duplicate plugins
-                if (!filename.empty() &&
-                    filename != "nEndState" &&
-                    !IsExcludedPlugin(filename) &&
+                if (!IsExcludedPlugin(filename) &&
                     uniqueMods.insert(filename).second)
                 {
                     ModEntryInfo entry;
@@ -694,7 +700,10 @@ namespace OutfitSystem {
                     entry.loadOrderIndex = (*lightMod)->GetSmallFileCompileIndex();
                     entry.filePtr = *lightMod;
                     userMods.push_back(entry);
+                    // LOG(info, "Light mod: {}", entry.filename);
                 }
+
+                // LOG(info, "Done processing: {}", filename);
 
                 ++lightMod;
             }
@@ -713,12 +722,13 @@ namespace OutfitSystem {
 
             g_isModListCached = true;
             g_cachedModCount = static_cast<uint32_t>(g_cachedModList.size());
-            LOG(info, "Total mod count: {}", g_cachedModCount);
+            // LOG(info, "Total mod count: {}", g_cachedModCount);
         }
 
         // New function to get outfits for a specific mod
         std::vector<std::string> GetOutfitsForMod(const std::string& modName) {
             std::vector<std::string> outfits;
+            std::unordered_map<std::string, RE::BGSOutfit*> outfitMap;
 
             // Use the cached mod file
             auto modIt = g_cachedModMap.find(modName);
@@ -747,17 +757,18 @@ namespace OutfitSystem {
                     // Verify the form is from this mod
                     if ((currentForm.formID >> 24) == modIndex) {
                         // Try to retrieve the actual form
-                        RE::TESForm* form = RE::TESForm::LookupByID(currentForm.formID);
+                        RE::BGSOutfit* outfitForm = static_cast<RE::BGSOutfit*>(RE::TESForm::LookupByID(currentForm.formID));
 
-                        if (form) {
+                        if (outfitForm) {
                             // Get outfit name
-                            std::string outfitName = REUtilities::get_editorID(form);
+                            std::string outfitName = REUtilities::get_editorID(outfitForm);
                             if (outfitName.empty()) {
                                 // Generate default name using form ID
                                 outfitName = fmt::format("Outfit_{:X}", currentForm.formID & 0xFFF);
                             }
 
                             outfits.push_back(outfitName);
+                            outfitMap[outfitName] = outfitForm;
                         }
                     }
                 }
@@ -765,6 +776,8 @@ namespace OutfitSystem {
 
             // Close the file
             modFile->Seek(0);
+
+            modIt->second.outfitsMap = outfitMap;
 
             return outfits;
         }
@@ -1018,6 +1031,51 @@ namespace OutfitSystem {
             return;
         }
     }
+
+    // returns the status, 1 for success, 0 for failure.
+    uint32_t AddOutfitFromModToOutfitList(RE::BSScript::IVirtualMachine* registry,
+                      std::uint32_t stackId,
+                      RE::StaticFunctionTag*,
+                      std::string modName,
+                      std::string formEditorID
+    ) {
+        // Ensure mod list is cached
+        if (!g_isModListCached) {
+            CacheAllLoadedMods();
+        }
+
+        auto modIt = g_cachedModMap.find(modName);
+
+        if (modIt == g_cachedModMap.end() || modIt->second.outfitsMap.empty()) {
+            return 0;
+        }
+
+        // Get outfits for this mod
+        auto outfit = modIt->second.outfitsMap.find(formEditorID);
+
+        if (outfit == modIt->second.outfitsMap.end()) {
+            return 0;
+        }
+
+        std::vector<RE::TESObjectARMO*> outfitArmors;
+
+        for (const auto& outfitArmor : outfit->second->outfitItems) {
+            RE::TESObjectARMO* armor = static_cast<RE::TESObjectARMO*>(outfitArmor);
+            outfitArmors.emplace_back(armor);
+        }
+
+        try {
+
+
+            OverwriteOutfit(registry, stackId, nullptr, outfit->first, outfitArmors);
+            return 1;
+        }
+        catch (const std::exception& e) {
+            LOG(critical, "Failed to add outfit {} from mod {}", formEditorID, modName);
+            return 0;
+        }
+    }
+
     void SetEnabled(RE::BSScript::IVirtualMachine* registry,
                     std::uint32_t stackId,
                     RE::StaticFunctionTag*,
@@ -1550,6 +1608,10 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "GetAllLoadedOutfitsForModPaginatedList",
         "SkyrimOutfitSystemNativeFuncs",
         GetAllLoadedOutfitsForModPaginatedList);
+    registry->RegisterFunction(
+        "AddOutfitFromModToOutfitList",
+        "SkyrimOutfitSystemNativeFuncs",
+        AddOutfitFromModToOutfitList);
 
     return true;
 }

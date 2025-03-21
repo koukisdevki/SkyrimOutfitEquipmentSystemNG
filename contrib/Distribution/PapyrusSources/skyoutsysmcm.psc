@@ -32,7 +32,7 @@ Int _iTotalMods = 0
 Int _iTotalModPages = 0
 Int      _OutfitImportModPage   = 1
 String[] _sOutfitImporter_AddModCandidates
-String _sOutfitImporter_SelectedMod
+String _sOutfitImporter_SelectedMod = ""
 Int _iOutfitImporter_HeaderOptionCount
 
 
@@ -558,7 +558,7 @@ EndFunction
             AddInputOptionST("OutfitContext_New", "$SkyOutSys_OContext_New", "")
             AddInputOptionST("OutfitContext_NewFromWorn", "$SkyOutSys_OContext_NewFromWorn", "")
 
-            AddMenuOptionST("OutfitContext_SelectImportMod", "$SkyOutSys_OContext_SelectImportMod", "")
+            AddMenuOptionST("OutfitContext_SelectImportMod", "$SkyOutSys_OContext_SelectImportMod", _sOutfitImporter_SelectedMod)
             AddMenuOptionST("OutfitContext_ImportOutfitFromMod", "$SkyOutSys_OContext_ImportOutfitsFromMod", "")
             ;
             Int iContextFlags = OPTION_FLAG_HIDDEN
@@ -814,10 +814,22 @@ EndFunction
              
              ; If we get here, an outfit was selected - adjust index to account for the header options
              Int outfitIndex = aiIndex - _iOutfitForModImporter_HeaderOptionCount
+             Int OutfitAddStatus = 0
+             String SelectedOutfitEditorFormID = ""
+
              If outfitIndex >= 0 && outfitIndex < _sOutfitImporter_AddOutfitsForModCandidate.Length
                 ; Here you would handle the selected outfit
                 ; For now, just setting a value to show selection
-                SetMenuOptionValueST(_sOutfitImporter_AddOutfitsForModCandidate[outfitIndex])
+                SelectedOutfitEditorFormID = _sOutfitImporter_AddOutfitsForModCandidate[outfitIndex]
+                SetMenuOptionValueST(SelectedOutfitEditorFormID)
+                OutfitAddStatus = SkyrimOutfitSystemNativeFuncs.AddOutfitFromModToOutfitList(_sOutfitImporter_SelectedMod, SelectedOutfitEditorFormID)
+                
+                If OutfitAddStatus == 1
+                  ShowMessage("$SkyOutSys_OContext_ImportOutfitsFromMod_Success{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutSys_MessageDismiss")
+                  FullRefresh()
+                Else 
+                  ShowMessage("$SkyOutSys_OContext_ImportOutfitsFromMod_Failure{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutSys_MessageDismiss")
+                EndIf
              EndIf
              
              ; Clear the candidates list when we're done

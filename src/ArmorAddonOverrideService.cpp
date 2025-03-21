@@ -136,7 +136,7 @@ Outfit& ArmorAddonOverrideService::getOrCreateOutfit(const char* name) {
 //
 void ArmorAddonOverrideService::addOutfit(const char* name) {
     _validateNameOrThrow(name);
-    auto created = outfits.emplace(name, name);
+    outfits.emplace(name, name);
 }
 
 void ArmorAddonOverrideService::addOutfit(const char* name, std::vector<RE::TESObjectARMO*> armors) {
