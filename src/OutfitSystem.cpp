@@ -701,18 +701,26 @@ namespace OutfitSystem {
 
             // Process light mods
             auto* lightMod = dataHandler->GetLoadedLightMods();
-            while (lightMod && *lightMod) {
+            while (lightMod) {
+                LOG(info, "Starting Mod Processing");
                 std::string filename;
+
                 try {
                     // Check if the pointer is valid before dereferencing
+                    LOG(info, "Checking if mod pointer is null");
+
                     if (!*lightMod) {
                         LOG(info, "Encountered null mod pointer");
                         break;
                     }
 
+                    LOG(info, "Checking filename");
+
                     // Additional check - try to safely access fileName field
                     // If fileName is accessible but garbage, limit the string length
                     const char* filenamePtr = (*lightMod)->fileName;
+
+                    LOG(info, "Checking if mod file has a correct filename, and printable");
                     if (!filenamePtr || !IsPrintableString(filenamePtr, MAX_PATH)) {
                         LOG(info, "Non-printable filename detected, likely invalid TESFile");
                         break;
@@ -720,17 +728,21 @@ namespace OutfitSystem {
 
                     filename = std::string((*lightMod)->GetFilename());
                 }
-                catch (const std::exception& e) {
-                    LOG(info, "Failed to get mod: {}", e.what());
+                catch (...) {
+                    LOG(info, "Failed to get mod");
                     break;  // Breaking out of the loop on exception is safer
                 }
+
+                LOG(info, "Checking if mod is empty or last");
 
                 if (filename.empty() || filename == "nEndState") {
                     LOG(info, "Found end of all light mods.");
                     break;
                 }
 
-                // Skip empty, excluded, and duplicate plugins
+                LOG(info, "Checking if is excluded or duplicated");
+
+                // Skip excluded, and duplicate plugins
                 if (!IsExcludedPlugin(filename) &&
                     uniqueMods.insert(filename).second)
                 {
@@ -823,26 +835,11 @@ namespace OutfitSystem {
         }
     }
 
-    // Count function now uses the cache
-    std::uint32_t GetAllLoadedModsCount(
+    std::vector<std::string> GetAllLoadedModsList(
         RE::BSScript::IVirtualMachine* registry,
         std::uint32_t stackId,
         RE::StaticFunctionTag*
     ) {
-        if (!g_isModListCached) {
-            CacheAllLoadedMods();
-        }
-        return g_cachedModList.size();
-    }
-
-    // Paginated list function now uses the cache
-    std::vector<std::string> GetAllLoadedModsPaginatedList(
-        RE::BSScript::IVirtualMachine* registry,
-        std::uint32_t stackId,
-        RE::StaticFunctionTag*,
-        uint32_t page = 1
-    ) {
-        constexpr uint32_t MODS_PER_PAGE = 124;
         std::vector<std::string> result;
 
         // Use cached mod list
@@ -850,60 +847,21 @@ namespace OutfitSystem {
             CacheAllLoadedMods();
         }
 
-        // If no user mods found, return empty list
-        if (g_cachedModList.empty()) {
-            return result;
-        }
-
-        // Calculate pagination
-        const std::uint32_t totalPages = (g_cachedModList.size() + MODS_PER_PAGE - 1) / MODS_PER_PAGE;
-
-        // Validate page number
-        if (page < 1) {
-            page = 1;
-        } else if (page > totalPages) {
-            page = totalPages;
-        }
-
-        // Calculate start and end indices for the requested page
-        const std::uint32_t startIdx = (page - 1) * MODS_PER_PAGE;
-        const std::uint32_t endIdx = std::min(startIdx + MODS_PER_PAGE, static_cast<std::uint32_t>(g_cachedModList.size()));
-
-        // Add mods for the current page from cache
-        result.reserve(endIdx - startIdx);
-        for (std::uint32_t i = startIdx; i < endIdx; ++i) {
-            result.push_back(g_cachedModList[i]);
+        result.reserve(g_cachedModList.size());
+        for (const auto & modString : g_cachedModList) {
+            result.push_back(modString);
         }
 
         return result;
     }
 
-    // Count function for outfits in a specific mod
-    std::uint32_t GetAllLoadedOutfitsForModCount(
+    // Paginated list of outfits for a specific mod
+    std::vector<std::string> GetAllLoadedOutfitsForMod(
         RE::BSScript::IVirtualMachine* registry,
         std::uint32_t stackId,
         RE::StaticFunctionTag*,
         std::string modName
     ) {
-        // Ensure mod list is cached
-        if (!g_isModListCached) {
-            CacheAllLoadedMods();
-        }
-
-        // Get outfits for this mod
-        auto outfits = GetOutfitsForMod(modName);
-        return static_cast<std::uint32_t>(outfits.size());
-    }
-
-    // Paginated list of outfits for a specific mod
-    std::vector<std::string> GetAllLoadedOutfitsForModPaginatedList(
-        RE::BSScript::IVirtualMachine* registry,
-        std::uint32_t stackId,
-        RE::StaticFunctionTag*,
-        std::string modName,
-        uint32_t page = 1
-    ) {
-        constexpr uint32_t OUTFITS_PER_PAGE = 124;
         std::vector<std::string> result;
 
         // Ensure mod list is cached
@@ -914,25 +872,9 @@ namespace OutfitSystem {
         // Get all outfits for this mod
         auto outfits = GetOutfitsForMod(modName);
 
-        if (outfits.empty()) {
-            return result;
-        }
-
-        // Calculate pagination
-        const std::uint32_t totalOutfits = static_cast<std::uint32_t>(outfits.size());
-        const std::uint32_t totalPages = (totalOutfits + OUTFITS_PER_PAGE - 1) / OUTFITS_PER_PAGE;
-
-        // Validate page number
-        page = std::clamp(page, 1u, totalPages);
-
-        // Calculate start and end indices
-        const std::uint32_t startIdx = (page - 1) * OUTFITS_PER_PAGE;
-        const std::uint32_t endIdx = std::min(startIdx + OUTFITS_PER_PAGE, totalOutfits);
-
-        // Add outfits for the current page
-        result.reserve(endIdx - startIdx);
-        for (std::uint32_t i = startIdx; i < endIdx; ++i) {
-            result.push_back(outfits[i]);
+        result.reserve(outfits.size());
+        for (const auto & outfit : outfits) {
+            result.push_back(outfit);
         }
 
         return result;
@@ -1732,21 +1674,13 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "SkyrimOutfitSystemNativeFuncs",
         ImportSettings);
     registry->RegisterFunction(
-        "GetAllLoadedModsCount",
+        "GetAllLoadedModsList",
         "SkyrimOutfitSystemNativeFuncs",
-        GetAllLoadedModsCount);
+        GetAllLoadedModsList);
     registry->RegisterFunction(
-        "GetAllLoadedModsPaginatedList",
+        "GetAllLoadedOutfitsForMod",
         "SkyrimOutfitSystemNativeFuncs",
-        GetAllLoadedModsPaginatedList);
-    registry->RegisterFunction(
-    "GetAllLoadedOutfitsForModCount",
-    "SkyrimOutfitSystemNativeFuncs",
-    GetAllLoadedOutfitsForModCount);
-    registry->RegisterFunction(
-        "GetAllLoadedOutfitsForModPaginatedList",
-        "SkyrimOutfitSystemNativeFuncs",
-        GetAllLoadedOutfitsForModPaginatedList);
+        GetAllLoadedOutfitsForMod);
     registry->RegisterFunction(
         "AddOutfitFromModToOutfitList",
         "SkyrimOutfitSystemNativeFuncs",
