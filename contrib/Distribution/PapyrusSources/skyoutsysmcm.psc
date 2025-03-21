@@ -2,6 +2,7 @@ Scriptname SkyOutSysMCM extends SKI_ConfigBase Hidden
 
 Int      _iOutfitBrowserPage   = 0
 Int      _iOutfitNameMaxBytes = 256 ; should never change at run-time; can change if the DLL is revised appropriately
+Int _OutfitsPageMaxOutfits = 60
 String[] _sOutfitNames
 String   _sSelectedOutfit = ""
 
@@ -27,7 +28,12 @@ Armor[]  _kOutfitEditor_AddFromListCandidates
 String   _sOutfitEditor_AddFromList_Filter   = ""
 Bool     _bOutfitEditor_AddFromList_Playable = True
 
-Int _iSelectMenuMax = 1000
+Int _iSelectMenuMax = 124
+
+; outfit page
+Int _OutfitNamesPage = 1
+Int _iOutfitNames_HeaderOptionCount = 0
+Int _iOutfitNames_PageStartIndex = 0
 
 ; optionally reset on config open
 Int _OutfitImportModPage   = 1
@@ -228,27 +234,134 @@ EndFunction
    Event OnMenuOpenST()
       String sState = GetState()
       If StringUtil.Substring(sState, 0, 19) == "OPT_AutoswitchEntry"
-         String[] sMenu = PrependStringToArray(_sOutfitNames, "$SkyOutSys_AutoswitchEdit_None")
-         sMenu = PrependStringToArray(sMenu, "$SkyOutSys_AutoswitchEdit_Cancel")
-         SetMenuDialogOptions(sMenu)
-         SetMenuDialogStartIndex(0)
-         SetMenuDialogDefaultIndex(0)
-         Return
+          ; Calculate total outfits and pages
+          Int totalOutfits = _sOutfitNames.Length
+          Int totalPages = (totalOutfits + _iSelectMenuMax - 1) / _iSelectMenuMax
+          
+          ; Calculate start and end indices for the current page
+          Int startIndex = (_OutfitNamesPage - 1) * _iSelectMenuMax
+          
+          ; Calculate end index with a simple comparison
+          Int maxEndIndex = totalOutfits - 1
+          Int calculatedEndIndex = startIndex + _iSelectMenuMax - 1
+          Int endIndex = calculatedEndIndex
+          
+          ; Ensure we don't exceed the array bounds
+          If endIndex > maxEndIndex
+              endIndex = maxEndIndex
+          EndIf
+          
+          ; Calculate how many items will be on this page
+          Int itemsOnPage = endIndex - startIndex + 1
+          
+          ; Add navigation buttons conditionally
+          Bool hasPrevPage = (_OutfitNamesPage > 1) && totalPages > 1
+          Bool hasNextPage = (_OutfitNamesPage < totalPages) && totalPages > 1
+          
+          ; Count navigation options
+          Int navOptionsCount = 0
+          If hasPrevPage
+              navOptionsCount += 1
+          EndIf
+          If hasNextPage
+              navOptionsCount += 1
+          EndIf
+          
+          ; Calculate total menu size: 
+          ; cancel button + "None" option + nav options + outfit entries for the page
+          Int menuSize = 1 + 1 + navOptionsCount + itemsOnPage
+          
+          ; Create menu array with exact size
+          String[] sMenu = Utility.CreateStringArray(menuSize)
+          
+          ; Set cancel option
+          sMenu[0] = "$SkyOutSys_AutoswitchEdit_Cancel"
+          
+          ; Set None option
+          sMenu[1] = "$SkyOutSys_AutoswitchEdit_None"
+          
+          ; Current position in the menu array
+          Int menuIndex = 2
+          
+          ; Add navigation buttons
+          If hasPrevPage
+              sMenu[menuIndex] = "$SkyOutSys_MCMText_PrevPageOption"
+              menuIndex += 1
+          EndIf
+          
+          If hasNextPage
+              sMenu[menuIndex] = "$SkyOutSys_MCMText_NextPageOption"
+              menuIndex += 1
+          EndIf
+          
+          ; Store the number of header options (cancel + none + nav options)
+          Int headerOptionsCount = 2 + navOptionsCount
+          
+          ; Add outfit entries for the current page
+          Int i = 0
+          While i < itemsOnPage
+              sMenu[menuIndex] = _sOutfitNames[startIndex + i]
+              menuIndex += 1
+              i += 1
+          EndWhile
+          
+          ; Set the menu options
+          SetMenuDialogOptions(sMenu)
+          SetMenuDialogStartIndex(0)
+          SetMenuDialogDefaultIndex(0)
+          
+          ; Store values for the OnAccept handler
+          _iOutfitNames_HeaderOptionCount = headerOptionsCount
+          _iOutfitNames_PageStartIndex = startIndex
+          Return
       EndIf
-   EndEvent
-   Event OnMenuAcceptST(Int aiIndex)
+  EndEvent
+  Event OnMenuAcceptST(Int aiIndex)
       String sState = GetState()
       If StringUtil.Substring(sState, 0, 19) == "OPT_AutoswitchEntry"
-         aiIndex = aiIndex - 2
-         If aiIndex == -2 ; user canceled
+         ; Get navigation state
+         Int totalOutfits = _sOutfitNames.Length
+         Int totalPages = (totalOutfits + _iSelectMenuMax - 1) / _iSelectMenuMax
+         Bool hasPrevPage = (_OutfitNamesPage > 1) && totalPages > 1
+         Bool hasNextPage = (_OutfitNamesPage < totalPages) && totalPages > 1
+         
+         If aiIndex == 0 ; user canceled
             Return
          EndIf
-         Int iAutoswitchIndex = StringUtil.Substring(sState, 19) as Int
-         If aiIndex == -1 ; user wants no outfit
+         
+         If aiIndex == 1 ; user wants no outfit
+            Int iAutoswitchIndex = StringUtil.Substring(sState, 19) as Int
             SkyrimOutfitSystemNativeFuncs.UnsetLocationOutfit(_aCurrentActor, iAutoswitchIndex)
             SetMenuOptionValueST("$SkyOutSys_AutoswitchEdit_None")
-         Else ; set the requested outfit
-            String sOutfitName = _sOutfitNames[aiIndex]
+            Return
+         EndIf
+         
+         ; Check for navigation buttons
+         Int navOffset = 2 ; Start with 2 to account for Cancel and None options
+         
+         ; Check if Previous Page was selected
+         If hasPrevPage && aiIndex == navOffset
+            _OutfitNamesPage -= 1
+            SetMenuDialogOptions(new String[1]) ; Force menu to reopen
+            ShowMessage("$SkyOutSys_MCMText_PrevPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+            Return
+         EndIf
+         navOffset += hasPrevPage as Int ; Move offset if we have a prev button
+         
+         ; Check if Next Page was selected
+         If hasNextPage && aiIndex == navOffset
+            _OutfitNamesPage += 1
+            SetMenuDialogOptions(new String[1]) ; Force menu to reopen
+            ShowMessage("$SkyOutSys_MCMText_NextPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+            Return
+         EndIf
+         
+         ; If we get here, an outfit was selected
+         Int outfitIndex = aiIndex - _iOutfitNames_HeaderOptionCount + _iOutfitNames_PageStartIndex
+         If outfitIndex >= 0 && outfitIndex < _sOutfitNames.Length
+            ; Set the requested outfit
+            String sOutfitName = _sOutfitNames[outfitIndex]
+            Int iAutoswitchIndex = StringUtil.Substring(sState, 19) as Int
             SkyrimOutfitSystemNativeFuncs.SetLocationOutfit(_aCurrentActor, iAutoswitchIndex, sOutfitName)
             SetMenuOptionValueST(SkyrimOutfitSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, iAutoswitchIndex))
          EndIf
@@ -477,20 +590,20 @@ EndFunction
             Int iFlagsPrev
             Int iFlagsNext
             
-            If _sOutfitNames.Length > 11 ; too many to fit on one screen
+            If _sOutfitNames.Length > _OutfitsPageMaxOutfits ; too many to fit on one screen
                iCount     = _sOutfitNames.Length
-               iPageCount = iCount / 11
-               If iPageCount * 11 < iCount
+               iPageCount = iCount / _OutfitsPageMaxOutfits
+               If iPageCount * _OutfitsPageMaxOutfits < iCount
                   iPageCount = iPageCount + 1
                EndIf
                If _iOutfitBrowserPage >= iPageCount
                   _iOutfitBrowserPage = iPageCount - 1
                EndIf
-               Int iOffset    = _iOutfitBrowserPage * 11
+               Int iOffset    = _iOutfitBrowserPage * _OutfitsPageMaxOutfits
                Int iIterator  = 0
                Int iMax       = iCount - iOffset
-               If iMax > 11
-                  iMax = 11
+               If iMax > _OutfitsPageMaxOutfits
+                  iMax = _OutfitsPageMaxOutfits
                EndIf
                While iIterator < iMax
                   String sName = _sOutfitNames[iIterator + iOffset]
@@ -535,7 +648,7 @@ EndFunction
          ;/Block/; ; Right column
             SetCursorPosition(1)
 
-            If _sOutfitNames.Length > 11
+            If _sOutfitNames.Length > _OutfitsPageMaxOutfits
                AddHeaderOption("")
                AddTextOptionST("OutfitBrowser_Prev", "$SkyOutSys_MCMText_OutfitListPageNumber{" + (_iOutfitBrowserPage + 1) + "}{" + iPageCount + "}", "$SkyOutSys_MCMText_OutfitListButtonPagePrev", iFlagsPrev)
                AddTextOptionST("OutfitBrowser_Next", "", "$SkyOutSys_MCMText_OutfitListButtonPageNext", iFlagsNext)
@@ -648,8 +761,8 @@ EndFunction
             Int itemsOnPage = endIndex - startIndex + 1
             
             ; Add navigation buttons conditionally
-            Bool hasPrevPage = (_OutfitImportModPage > 1)
-            Bool hasNextPage = (_OutfitImportModPage < iTotalModPages)
+            Bool hasPrevPage = (_OutfitImportModPage > 1) && iTotalModPages > 1
+            Bool hasNextPage = (_OutfitImportModPage < iTotalModPages) && iTotalModPages > 1
             
             Int navOptionsCount = 0
             If hasPrevPage
@@ -705,8 +818,8 @@ EndFunction
             Int iTotalModPages = (_sOutfitImporter_ModList.Length + _iSelectMenuMax - 1) / _iSelectMenuMax
 
             ; Get navigation state
-            Bool hasPrevPage = (_OutfitImportModPage > 1)
-            Bool hasNextPage = (_OutfitImportModPage < iTotalModPages)
+            Bool hasPrevPage = (_OutfitImportModPage > 1) && iTotalModPages > 1
+            Bool hasNextPage = (_OutfitImportModPage < iTotalModPages) && iTotalModPages > 1
             
             ; Handle user selection
             If aiIndex == 0 ; Cancel option
@@ -776,8 +889,8 @@ EndFunction
             Int itemsOnPage = endIndex - startIndex + 1
             
             ; Add navigation buttons conditionally
-            Bool hasPrevPage = (_OutfitImportOutfitsForModPage > 1)
-            Bool hasNextPage = (_OutfitImportOutfitsForModPage < _iTotalOutfitForModPages)
+            Bool hasPrevPage = (_OutfitImportOutfitsForModPage > 1) && _iTotalOutfitForModPages > 1
+            Bool hasNextPage = (_OutfitImportOutfitsForModPage < _iTotalOutfitForModPages) && _iTotalOutfitForModPages > 1
             
             ; Count navigation options - start with 1 for the "Load All Outfits" option
             Int navOptionsCount = 1 
@@ -839,8 +952,8 @@ EndFunction
          Event OnMenuAcceptST(Int aiIndex)
              ; Get navigation state
              Int _iTotalOutfitForModPages = (_sOutfitImporter_AddOutfitsForModCandidates.Length + _iSelectMenuMax - 1) / _iSelectMenuMax
-             Bool hasPrevPage = (_OutfitImportOutfitsForModPage > 1)
-             Bool hasNextPage = (_OutfitImportOutfitsForModPage < _iTotalOutfitForModPages)
+             Bool hasPrevPage = (_OutfitImportOutfitsForModPage > 1) && _iTotalOutfitForModPages > 1
+             Bool hasNextPage = (_OutfitImportOutfitsForModPage < _iTotalOutfitForModPages) && _iTotalOutfitForModPages > 1
              
              ; Handle user selection
              If aiIndex == 0 ; Cancel option

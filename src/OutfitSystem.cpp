@@ -1,15 +1,14 @@
 #include "OutfitSystem.h"
 
-#include "Utility.h"
-
-#include "ArmorAddonOverrideService.h"
-
-#include "cobb/strings.h"
-#include "cobb/utf8naturalsort.h"
-#include "cobb/utf8string.h"
+#include <excpt.h>
 
 #include <algorithm>
 
+#include "ArmorAddonOverrideService.h"
+#include "Utility.h"
+#include "cobb/strings.h"
+#include "cobb/utf8naturalsort.h"
+#include "cobb/utf8string.h"
 #include "google/protobuf/util/json_util.h"
 
 #define ERROR_AND_RETURN_EXPR_IF(condition, message, valueExpr, registry, stackId)               \
@@ -641,23 +640,28 @@ namespace OutfitSystem {
         std::vector<std::string> g_cachedModList;
         bool g_isModListCached = false;
 
-        // Helper function to validate if a string pointer contains printable content
         bool IsPrintableString(const char* str, size_t maxLen) {
+            // First check if str is null
             if (!str) return false;
 
-            size_t len = 0;
-            while (*str && len < maxLen) {
-                // Check if character is in printable ASCII range or common control chars
-                if ((*str < 0x20 || *str > 0x7E) && *str != '\t' && *str != '\n' && *str != '\r') {
-                    return false;
+            try {
+                size_t len = 0;
+                while (str[len] && len < maxLen) {  // Use indexing which is sometimes safer
+                    char c = str[len];
+                    // Check if character is in printable ASCII range or common control chars
+                    if ((c < 0x20 || c > 0x7E) && c != '\t' && c != '\n' && c != '\r') {
+                        return false;
+                    }
+                    len++;
                 }
-                str++;
-                len++;
-            }
 
-            // Either we hit null terminator or reached max length
-            // A valid string should be null-terminated before maxLen
-            return *str == '\0' || len < maxLen;
+                // Either we hit null terminator or reached max length
+                return str[len] == '\0' || len < maxLen;
+            }
+            catch (...) {
+                // If we hit any exception, the string is not safely readable
+                return false;
+            }
         }
 
         void CacheAllLoadedMods() {
@@ -709,28 +713,59 @@ namespace OutfitSystem {
                     // Check if the pointer is valid before dereferencing
                     LOG(info, "Checking if mod pointer is null");
 
-                    if (!*lightMod) {
+                    if (!lightMod || !*lightMod) {
                         LOG(info, "Encountered null mod pointer");
                         break;
                     }
 
                     LOG(info, "Checking filename");
 
-                    // Additional check - try to safely access fileName field
-                    // If fileName is accessible but garbage, limit the string length
-                    const char* filenamePtr = (*lightMod)->fileName;
+                    // Check if filename exists and is valid - without directly dereferencing it until we've done checks
+                    const char* filenamePtr = nullptr;
+                    try {
+                        filenamePtr = (*lightMod)->fileName;
+                    }
+                    catch (...) {
+                        LOG(info, "Failed to access fileName field");
+                        break;
+                    }
+
+                    // Don't proceed if filename pointer is null
+                    if (!filenamePtr) {
+                        LOG(info, "Null filename pointer detected");
+                        break;
+                    }
 
                     LOG(info, "Checking if mod file has a correct filename, and printable");
-                    if (!filenamePtr || !IsPrintableString(filenamePtr, MAX_PATH)) {
+
+                    // Check first character directly to avoid undefined behavior with IsPrintableString
+                    if (!*filenamePtr) {  // Check if it's an empty string
+                        LOG(info, "Empty filename detected");
+                        break;
+                    }
+
+                    // Now try checking the whole string
+                    if (!IsPrintableString(filenamePtr, MAX_PATH)) {
                         LOG(info, "Non-printable filename detected, likely invalid TESFile");
                         break;
                     }
 
-                    filename = std::string((*lightMod)->GetFilename());
+                    // Try to get the filename safely
+                    try {
+                        filename = std::string((*lightMod)->GetFilename());
+                    }
+                    catch (...) {
+                        LOG(info, "Failed to get filename via GetFilename()");
+                        break;
+                    }
+                }
+                catch (const std::exception& e) {
+                    LOG(info, "Exception processing mod: {}", e.what());
+                    break;
                 }
                 catch (...) {
-                    LOG(info, "Failed to get mod");
-                    break;  // Breaking out of the loop on exception is safer
+                    LOG(info, "Failed to get mod - unknown exception");
+                    break;
                 }
 
                 LOG(info, "Checking if mod is empty or last");
@@ -763,7 +798,7 @@ namespace OutfitSystem {
 
             std::sort(userMods.begin(), userMods.end(),
                 [](const ModEntryInfo& a, const ModEntryInfo& b) {
-                    return a.loadOrderIndex > b.loadOrderIndex;
+                    return a.loadOrderIndex < b.loadOrderIndex;
                 });
 
             g_cachedModList.reserve(userMods.size());
