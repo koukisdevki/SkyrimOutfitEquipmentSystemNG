@@ -38,9 +38,9 @@ struct ActorActionStatusTracker {
 
 class AutoOutfitSwitchService {
 public:
-    static AutoOutfitSwitchService& GetInstance() {
-        static AutoOutfitSwitchService instance;
-        return instance;
+    static AutoOutfitSwitchService& GetSingleton() {
+        static AutoOutfitSwitchService singleton;
+        return singleton;
     }
 
     // Delete copy/move constructors and assignment operators

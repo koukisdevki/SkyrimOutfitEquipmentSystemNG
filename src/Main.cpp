@@ -4,6 +4,7 @@
 
 #include "ArmorAddonOverrideService.h"
 #include "Utility.h"
+#include "Hooking.h"
 
 using namespace RE::BSScript;
 using namespace SKSE;
@@ -65,6 +66,8 @@ void Callback_Serialization_Load(SKSE::SerializationInterface* intfc);
 
 void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
     if (message->type == SKSE::MessagingInterface::kPostLoad) {
+        // Install hooks
+        Hooking::install_hook<OutfitSystem::EquipObject>();
     } else if (message->type == SKSE::MessagingInterface::kPostPostLoad) {
     } else if (message->type == SKSE::MessagingInterface::kDataLoaded) {
     } else if (message->type == SKSE::MessagingInterface::kNewGame) {
@@ -73,7 +76,7 @@ void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
         ArmorAddonOverrideService::GetInstance().addActor(pc);
 
         // Modify the service to handle cleanup internally
-        auto& autoOutfitservice = AutoOutfitSwitchService::GetInstance();
+        auto& autoOutfitservice = AutoOutfitSwitchService::GetSingleton();
         autoOutfitservice.Reset();
         autoOutfitservice.RestartMonitoring();
     } else if (message->type == SKSE::MessagingInterface::kPreLoadGame) {
@@ -82,7 +85,7 @@ void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
         ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
     }
     else if (message->type == SKSE::MessagingInterface::kPostLoadGame) {
-        auto& service = AutoOutfitSwitchService::GetInstance();
+        auto& service = AutoOutfitSwitchService::GetSingleton();
         service.Reset();
         service.RestartMonitoring();
     }

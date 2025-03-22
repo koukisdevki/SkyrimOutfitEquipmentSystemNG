@@ -4,7 +4,6 @@
 
 #include <algorithm>
 
-#include "ArmorAddonOverrideService.h"
 #include "Utility.h"
 #include "cobb/strings.h"
 #include "cobb/utf8naturalsort.h"
@@ -133,7 +132,7 @@ namespace OutfitSystem {
                 // if the currently equipped outfit is not part of the outfit, remove it
                 if (displayItems.count(equippedArmor) == 0) {
                     auto* equipSlot = equippedArmor->GetEquipSlot();
-                    equipManager->UnequipObject(target, equippedArmor, nullptr, 1, equipSlot, false, false, false, true);
+                    equipManager->UnequipObject(target, equippedArmor, nullptr, 1, equipSlot, false, forceEquip, false, true);
                 }
             }
 
