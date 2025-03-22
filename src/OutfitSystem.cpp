@@ -632,7 +632,7 @@ namespace OutfitSystem {
         struct ModEntryInfo {
             std::string filename;
             uint32_t loadOrderIndex;
-            RE::TESFile* filePtr; // Add file pointer
+            const RE::TESFile* filePtr; // Add file pointer
             std::unordered_map<std::string, RE::BGSOutfit*> outfitsMap;
         };
 
@@ -676,208 +676,63 @@ namespace OutfitSystem {
             }
 
             std::unordered_set<std::string> uniqueMods;
-            std::vector<ModEntryInfo> userMods;
+            std::unordered_map<std::string, ModEntryInfo> userMods;
 
-            // Process regular mods
-            std::uint32_t regularModCount = dataHandler->GetLoadedModCount();
-            auto* regularMods = dataHandler->GetLoadedMods();
+            auto outfitForms = dataHandler->GetFormArray<RE::BGSOutfit>();
 
-            LOG(info, "Total regular mods count: {}", regularModCount);
+            for (auto outfitForm : outfitForms) {
+                const RE::TESFile* mod = outfitForm->GetFile(0);
 
-            for (std::uint32_t i = 0; i < regularModCount; ++i) {
-                if (regularMods[i]) {
-                    std::string filename = std::string(regularMods[i]->GetFilename());
+                if (!mod)
+                    continue;
 
-                    // Skip excluded and duplicate plugins
-                    if (!IsExcludedPlugin(filename) && uniqueMods.insert(filename).second) {
+                std::string filename = std::string(mod->GetFilename());
+
+                // Skip excluded and duplicate plugins
+                if (!IsExcludedPlugin(filename)) {
+                    if (uniqueMods.insert(filename).second) {
                         ModEntryInfo entry;
                         entry.filename = filename;
-                        entry.loadOrderIndex = regularMods[i]->GetCompileIndex();
-                        entry.filePtr = regularMods[i];
-                        userMods.push_back(entry);
+                        entry.loadOrderIndex = mod->GetCompileIndex();
+                        entry.filePtr = mod;
+                        userMods[filename] = entry;
 
                         LOG(info, "Regular mod: {}", entry.filename);
-                        LOG(info, "Done processing: {}, Load order {}", filename, regularMods[i]->GetCompileIndex());
+                        LOG(info, "Done processing: {}, Load order {}", filename, mod->GetCompileIndex());
                     }
+                    else if (userMods.contains(filename)) {
+                        ModEntryInfo& entry = userMods[filename];
+                        // Get outfit name
+                        std::string outfitName = REUtilities::get_editorID(outfitForm);
+                        if (outfitName.empty()) {
+                            // Generate default name using form ID
+                            outfitName = fmt::format("Outfit_{:X}", outfitForm->formID & 0xFFF);
+                        }
 
-                    LOG(info, "Done processing: {}", filename);
+                        std::unordered_map<std::string, RE::BGSOutfit*> outfitMap;
+                        outfitMap[outfitName] = outfitForm;
+
+                        entry.outfitsMap = outfitMap;
+                    }
                 }
             }
-
-            // Process light mods
-            auto* lightMod = dataHandler->GetLoadedLightMods();
-            while (lightMod) {
-                LOG(info, "Starting Mod Processing");
-                std::string filename;
-
-                try {
-                    // Check if the pointer is valid before dereferencing
-                    LOG(info, "Checking if mod pointer is null");
-
-                    if (!lightMod || !*lightMod) {
-                        LOG(info, "Encountered null mod pointer");
-                        break;
-                    }
-
-                    LOG(info, "Checking filename");
-
-                    // Check if filename exists and is valid - without directly dereferencing it until we've done checks
-                    const char* filenamePtr = nullptr;
-                    try {
-                        filenamePtr = (*lightMod)->fileName;
-                    }
-                    catch (...) {
-                        LOG(info, "Failed to access fileName field");
-                        break;
-                    }
-
-                    // Don't proceed if filename pointer is null
-                    if (!filenamePtr) {
-                        LOG(info, "Null filename pointer detected");
-                        break;
-                    }
-
-                    LOG(info, "Checking if mod file has a correct filename, and printable");
-
-                    // Instead of dereferencing it directly, use a safer approach
-                    bool isValidString = false;
-                    try {
-                        // Try to create a string with limited length
-                        std::string test(filenamePtr, 0, 1);  // Just try to read the first character
-                        isValidString = true;
-                    }
-                    catch (...) {
-                        LOG(info, "Invalid filename memory detected");
-                        isValidString = false;
-                    }
-
-                    if (!isValidString) {
-                        break;
-                    }
-
-                    // Now try checking the whole string
-                    if (!IsPrintableString(filenamePtr, MAX_PATH)) {
-                        LOG(info, "Non-printable filename detected, likely invalid TESFile");
-                        break;
-                    }
-
-                    // Try to get the filename safely
-                    try {
-                        filename = std::string((*lightMod)->GetFilename());
-                    }
-                    catch (...) {
-                        LOG(info, "Failed to get filename via GetFilename()");
-                        break;
-                    }
-                }
-                catch (const std::exception& e) {
-                    LOG(info, "Exception processing mod: {}", e.what());
-                    break;
-                }
-                catch (...) {
-                    LOG(info, "Failed to get mod - unknown exception");
-                    break;
-                }
-
-                LOG(info, "Checking if mod is empty or last");
-
-                if (filename.empty() || filename == "nEndState") {
-                    LOG(info, "Found end of all light mods.");
-                    break;
-                }
-
-                LOG(info, "Checking if is excluded or duplicated");
-
-                // Skip excluded, and duplicate plugins
-                if (!IsExcludedPlugin(filename) &&
-                    uniqueMods.insert(filename).second)
-                {
-                    ModEntryInfo entry;
-                    entry.filename = filename;
-                    entry.loadOrderIndex = (*lightMod)->GetSmallFileCompileIndex();
-                    entry.filePtr = *lightMod;
-                    userMods.push_back(entry);
-                    LOG(info, "Light mod: {}", entry.filename);
-                }
-
-                LOG(info, "Done processing: {}, Load order {}", filename, (*lightMod)->GetSmallFileCompileIndex());
-
-                ++lightMod;
-            }
-
-            LOG(info, "Done with both regular and light mods.");
-
-            std::sort(userMods.begin(), userMods.end(),
-                [](const ModEntryInfo& a, const ModEntryInfo& b) {
-                    return a.loadOrderIndex < b.loadOrderIndex;
-                });
 
             g_cachedModList.reserve(userMods.size());
             for (const auto& mod : userMods) {
-                g_cachedModList.push_back(mod.filename);
-                g_cachedModMap[mod.filename] = mod;
+                g_cachedModList.push_back(mod.second.filename);
+                g_cachedModMap[mod.second.filename] = mod.second;
                 // LOG(info, "End result mod: {}", mod.filename);
             }
 
+            std::sort(g_cachedModList.begin(), g_cachedModList.end(),
+                [&userMods](std::string a, std::string b) {
+                    auto aModInfo = userMods[a];
+                    auto bModInfo = userMods[b];
+                    return aModInfo.loadOrderIndex < bModInfo.loadOrderIndex;
+                });
+
             g_isModListCached = true;
             LOG(info, "Total mod count: {}", g_cachedModList.size());
-        }
-
-        // New function to get outfits for a specific mod
-        std::vector<std::string> GetOutfitsForMod(const std::string& modName) {
-            std::vector<std::string> outfits;
-            std::unordered_map<std::string, RE::BGSOutfit*> outfitMap;
-
-            // Use the cached mod file
-            auto modIt = g_cachedModMap.find(modName);
-            if (modIt == g_cachedModMap.end() || !modIt->second.filePtr) {
-                return outfits;
-            }
-
-            RE::TESFile* modFile = modIt->second.filePtr;
-            uint8_t modIndex = modFile->GetCompileIndex();
-
-            // Ensure the file is open and reset
-            if (!modFile->OpenTES(RE::NiFile::OpenMode::kReadOnly, true)) {
-                return outfits;
-            }
-
-            // Reset to beginning
-            modFile->Seek(0);
-
-            // Iterate through forms
-            while (modFile->SeekNextForm(true)) {
-                // Check the current form
-                const RE::FORM& currentForm = modFile->currentform;
-
-                // Check if this is an outfit form (you might need to adjust the type checking)
-                if (modFile->GetFormType() == RE::FormType::Outfit) {
-                    // Verify the form is from this mod
-                    if ((currentForm.formID >> 24) == modIndex) {
-                        // Try to retrieve the actual form
-                        RE::BGSOutfit* outfitForm = static_cast<RE::BGSOutfit*>(RE::TESForm::LookupByID(currentForm.formID));
-
-                        if (outfitForm) {
-                            // Get outfit name
-                            std::string outfitName = REUtilities::get_editorID(outfitForm);
-                            if (outfitName.empty()) {
-                                // Generate default name using form ID
-                                outfitName = fmt::format("Outfit_{:X}", currentForm.formID & 0xFFF);
-                            }
-
-                            outfits.push_back(outfitName);
-                            outfitMap[outfitName] = outfitForm;
-                        }
-                    }
-                }
-            }
-
-            // Close the file
-            modFile->Seek(0);
-
-            modIt->second.outfitsMap = outfitMap;
-
-            return outfits;
         }
     }
 
@@ -915,12 +770,16 @@ namespace OutfitSystem {
             CacheAllLoadedMods();
         }
 
+        if (!g_cachedModMap.contains(modName)) {
+            return result;
+        }
+
         // Get all outfits for this mod
-        auto outfits = GetOutfitsForMod(modName);
+        auto& outfits = g_cachedModMap[modName].outfitsMap;
 
         result.reserve(outfits.size());
-        for (const auto & outfit : outfits) {
-            result.push_back(outfit);
+        for (const auto& outfitName : outfits | views::keys) {
+            result.push_back(outfitName);
         }
 
         return result;
@@ -1079,10 +938,11 @@ namespace OutfitSystem {
         }
 
         if (modIt->second.outfitsMap.empty()) {
-            // load up outfits
-            auto outfits = GetOutfitsForMod(modName);
+            // attempt to load up outfits
+            auto outfits = GetAllLoadedOutfitsForMod(registry, stackId, nullptr, modName);
+            auto modItRetry = g_cachedModMap.find(modName);
 
-            if (outfits.empty() || modIt->second.outfitsMap.empty()) {
+            if (outfits.empty() || modItRetry->second.outfitsMap.empty()) {
                 LOG(critical, "Failed to load any outfits for {}", modName);
                 return 0;
             }
@@ -1164,11 +1024,12 @@ namespace OutfitSystem {
         }
 
         if (modIt->second.outfitsMap.empty()) {
-            // load up outfits
-            auto outfits = GetOutfitsForMod(modName);
+            // attempt to load up outfits
+            auto outfits = GetAllLoadedOutfitsForMod(registry, stackId, nullptr, modName);
+            auto modItRetry = g_cachedModMap.find(modName);
 
-            if (outfits.empty() || modIt->second.outfitsMap.empty()) {
-                LOG(critical, "Cannot add all outfits, failed to load any outfits for {}", modName);
+            if (outfits.empty() || modItRetry->second.outfitsMap.empty()) {
+                LOG(critical, "Failed to load any outfits for {}", modName);
                 return 0;
             }
         }

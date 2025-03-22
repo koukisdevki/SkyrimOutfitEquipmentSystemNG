@@ -1,8 +1,8 @@
 Scriptname SkyOutSysMCM extends SKI_ConfigBase Hidden
 
 Int      _iOutfitBrowserPage   = 0
-Int      _iOutfitNameMaxBytes = 256 ; should never change at run-time; can change if the DLL is revised appropriately
-Int _OutfitsPageMaxOutfits = 20
+Int      _iOutfitNameMaxBytes = 256 ; init option, should never change at run-time; can change if the DLL is revised appropriately
+Int _OutfitsPageMaxOutfits ; init option
 String[] _sOutfitNames
 String   _sSelectedOutfit = ""
 
@@ -28,24 +28,24 @@ Armor[]  _kOutfitEditor_AddFromListCandidates
 String   _sOutfitEditor_AddFromList_Filter   = ""
 Bool     _bOutfitEditor_AddFromList_Playable = True
 
-Int _iSelectMenuMax = 124
+Int _iSelectMenuMax ; init option
 
 ; outfit page
-Int _OutfitNamesPage = 1
-Int _iOutfitNames_HeaderOptionCount = 0
-Int _iOutfitNames_PageStartIndex = 0
+Int _OutfitNamesPage ; init option
+Int _iOutfitNames_HeaderOptionCount ; init option
+Int _iOutfitNames_PageStartIndex ; init option
 
 ; optionally reset on config open
-Int _OutfitImportModPage   = 1
-Int _iOutfitImporter_PageStartIndex = 0
+Int _OutfitImportModPage ; init option
+Int _iOutfitImporter_PageStartIndex ; init option
 String[] _sOutfitImporter_ModList
-String _sOutfitImporter_SelectedMod = ""
-Int _iOutfitImporter_HeaderOptionCount = 0
+String _sOutfitImporter_SelectedMod = "" ; init option
+Int _iOutfitImporter_HeaderOptionCount ; init option
 
-Int _OutfitImportOutfitsForModPage = 1
-Int _iOutfitForModImporter_PageStartIndex = 0
+Int _OutfitImportOutfitsForModPage ; init option
+Int _iOutfitForModImporter_PageStartIndex ; init option
 String[] _sOutfitImporter_AddOutfitsForModCandidates
-Int _iOutfitForModImporter_HeaderOptionCount = 0
+Int _iOutfitForModImporter_HeaderOptionCount ; init option
 
 
 Function AddLocationOptions(Int[] aiIndices, String sHeaderKey)
@@ -81,11 +81,13 @@ EndEvent
 Event OnConfigInit()
 EndEvent
 Event OnConfigOpen()
+   InitializeOptions()
    _iOutfitNameMaxBytes = SkyrimOutfitSystemNativeFuncs.GetOutfitNameMaxLength()
    _sOutfitImporter_ModList = SkyrimOutfitSystemNativeFuncs.GetAllLoadedModsList()
    ResetOutfitBrowser()
    ResetOutfitEditor()
    RefreshCache()
+   ShowMessage("Max page outfits: " + _OutfitsPageMaxOutfits + " and Max submenu items" + _iSelectMenuMax)
 EndEvent
 Event OnConfigClose()
    SkyrimOutfitSystemNativeFuncs.SetOutfitsUsingLocation(Game.GetPlayer().GetCurrentLocation(), Weather.GetCurrentWeather())
@@ -107,19 +109,22 @@ Event OnPageReset(String asPage)
    EndIf
 EndEvent
 
-; Function InitReset()
-;    _OutfitImportModPage   = 1
-;    _sOutfitImporter_AddModCandidates = new String[1]
-;    _sOutfitImporter_SelectedMod = ""
-;    _iOutfitImporter_HeaderOptionCount = 0
-   
-   
-;    _iTotalOutfitsForMod = 0
-;    _iTotalOutfitForModPages = 0
-;    _OutfitImportOutfitsForModPage   = 1
-;    _sOutfitImporter_AddOutfitsForModCandidate = new String[1]
-;    _iOutfitForModImporter_HeaderOptionCount = 0
-; EndFunction
+Function InitializeOptions()
+   _OutfitsPageMaxOutfits = 20 ; init option
+   _iSelectMenuMax = 1000 ; init option
+   ; outfit page
+   _OutfitNamesPage = 1 ; init option
+   _iOutfitNames_HeaderOptionCount = 0 ; init option
+   _iOutfitNames_PageStartIndex = 0 ; init option
+   ; optionally reset on config open
+   _OutfitImportModPage   = 1 ; init option
+   _iOutfitImporter_PageStartIndex = 0 ; init option
+   _sOutfitImporter_SelectedMod = "" ; init option
+   _iOutfitImporter_HeaderOptionCount = 0 ; init option
+   _OutfitImportOutfitsForModPage = 1 ; init option
+   _iOutfitForModImporter_PageStartIndex = 0 ; init option
+   _iOutfitForModImporter_HeaderOptionCount = 0 ; init option
+EndFunction
 
 Function FullRefresh()
    ResetOutfitBrowser()
