@@ -248,6 +248,7 @@ void ArmorAddonOverrideService::addActor(RE::Actor* target) {
 }
 
 void ArmorAddonOverrideService::removeActor(RE::Actor* target) {
+    LOG(critical,"Removing actor {}", target->GetName());
     actorOutfitAssignments.erase(target);
 }
 

@@ -117,6 +117,49 @@ int REUtilities::GetRandomInt(int min, int max) {
     return distr(gen);
 }
 
+std::vector<RE::TESObjectARMO*> REUtilities::OutfitToArmorList(RE::BGSOutfit* outfit){
+    std::vector<RE::TESObjectARMO*> outfitArmors;
+
+    // Iterate through outfit items and resolve them
+    for (const auto& outfitItem : outfit->outfitItems) {
+        // If the item is a leveled list, resolve its armors
+        if (outfitItem->Is(RE::FormType::LeveledItem)) {
+            // Cast to TESLevItem
+            RE::TESLevItem* levItem = outfitItem->As<RE::TESLevItem>();
+            if (levItem) {
+                // Iterate through the leveled list entries
+                for (const auto& outfitItem : outfit->outfitItems) {
+                    // If the item is a leveled list, resolve its armors
+                    if (outfitItem->Is(RE::FormType::LeveledItem)) {
+                        RE::TESLevItem* levItem = outfitItem->As<RE::TESLevItem>();
+                        if (levItem) {
+                            // Get player level - you may need to adjust how you get this
+                            std::uint16_t playerLevel = RE::PlayerCharacter::GetSingleton()->GetLevel();
+                            REUtilities::ResolveArmorLeveledList(levItem, outfitArmors, playerLevel);
+                        }
+                    }
+                    // If the item is an armor, add it directly
+                    else if (outfitItem->IsArmor()) {
+                        RE::TESObjectARMO* armor = outfitItem->As<RE::TESObjectARMO>();
+                        if (armor) {
+                            outfitArmors.push_back(armor);
+                        }
+                    }
+                }
+            }
+        }
+        // If the item is an armor, add it directly
+        else if (outfitItem->IsArmor()) {
+            RE::TESObjectARMO* armor = outfitItem->As<RE::TESObjectARMO>();
+            if (armor) {
+                outfitArmors.push_back(armor);
+            }
+        }
+    }
+
+    return outfitArmors;
+}
+
 void REUtilities::ProcessArmorLeveledListEntry(const RE::LEVELED_OBJECT* entry, std::vector<RE::TESObjectARMO*>& outArmors, std::uint16_t playerLevel) {
     if (!entry || !entry->form) {
         return;

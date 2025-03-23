@@ -45,6 +45,7 @@ namespace REUtilities {
     GameTime CurrentGameHour();
     GameDayPart CurrentGameDayPart();
     int GetRandomInt(int min, int max);
+    std::vector<RE::TESObjectARMO*> OutfitToArmorList(RE::BGSOutfit* outfit);
     void ProcessArmorLeveledListEntry(const RE::LEVELED_OBJECT* entry, std::vector<RE::TESObjectARMO*>& outArmors, std::uint16_t playerLevel);
     void ResolveArmorLeveledList(RE::TESLevItem* levItem, std::vector<RE::TESObjectARMO*>& outArmors, std::uint16_t playerLevel);
 

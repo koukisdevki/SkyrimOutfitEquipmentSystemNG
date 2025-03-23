@@ -86,7 +86,6 @@ namespace OutfitSystem {
     }
 
     void RefreshArmorForActor(RE::Actor* target) {
-        auto pc = RE::PlayerCharacter::GetSingleton();
         if (!target || !target->Is3DLoaded()) {
             LOG(info, "Actor {} not loaded", target->GetName());
             return;
@@ -96,10 +95,27 @@ namespace OutfitSystem {
         auto& outfit = svc.currentOutfit(target);
 
         // Compute what should be displayed based on outfit settings
-        auto displayItems = outfit.m_armors;
+        unordered_set<RE::TESObjectARMO*> displayItems = outfit.m_armors;
 
-        bool isPlayerCharacter = (target == RE::PlayerCharacter::GetSingleton());
-        bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
+        // if no outfit, and the target is not the player, then equip default outfit
+        if (outfit == g_noOutfit && target != RE::PlayerCharacter::GetSingleton() && !svc.listActors().contains(target)) {
+            LOG(critical,"Actor {} has no outfit and not part of the list, attempting to set default outfit.", target->GetName());
+
+            // Get the default outfit for this NPC
+            auto defaultOutfit = target->GetActorBase()->defaultOutfit;
+
+            // If there's no default outfit either, just return without doing anything
+            if (!defaultOutfit) {
+                LOG(critical,"Actor {} has no default outfit", target->GetName());
+                return;
+            }
+
+            auto outfitArmors = REUtilities::OutfitToArmorList(defaultOutfit);
+            displayItems = unordered_set<RE::TESObjectARMO*>();
+            for (const auto& outfitArmor : outfitArmors) {
+                displayItems.insert(outfitArmor);
+            }
+        }
 
         // Get the ActorEquipManager for equipment operations
         auto equipManager = RE::ActorEquipManager::GetSingleton();
@@ -111,23 +127,26 @@ namespace OutfitSystem {
         // Get currently equipped items
         std::unordered_set<RE::TESObjectARMO*> equippedArmors;
         std::unordered_set<RE::TESObjectARMO*> outfitArmorsInInventory;
-        auto inv = target->GetInventory();
-        for (const auto& [item, data] : inv) {
-            if (item && item->Is(RE::FormType::Armor)) {
-                auto armor = item->As<RE::TESObjectARMO>();
-                if (armor && data.second && data.second->IsWorn()) {
-                    equippedArmors.insert(armor);
-                }
 
-                // if the current armor is part of the outfit, mark it as an inventory item
-                if (displayItems.count(armor) != 0) outfitArmorsInInventory.insert(armor);
-            }
-        }
-
-
+        bool isPlayerCharacter = (target == RE::PlayerCharacter::GetSingleton());
+        bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
 
         //If outfit exists, unequip armors that are not part of the outfit
-        if (outfit != g_noOutfit) {
+        if (!displayItems.empty()) {
+            auto inv = target->GetInventory();
+
+            for (const auto& [item, data] : inv) {
+                if (item && item->Is(RE::FormType::Armor)) {
+                    auto armor = item->As<RE::TESObjectARMO>();
+                    if (armor && data.second && data.second->IsWorn()) {
+                        equippedArmors.insert(armor);
+                    }
+
+                    // if the current armor is part of the outfit, mark it as an inventory item
+                    if (displayItems.count(armor) != 0) outfitArmorsInInventory.insert(armor);
+                }
+            }
+
             for (auto equippedArmor : equippedArmors) {
                 // if the currently equipped outfit is not part of the outfit, remove it
                 if (displayItems.count(equippedArmor) == 0) {
@@ -154,7 +173,7 @@ namespace OutfitSystem {
                 auto* equipSlot = armor->GetEquipSlot();
 
                 // Use ActorEquipManager to equip
-                equipManager->EquipObject(target, armor, nullptr, 1, equipSlot, false, forceEquip, true, true);
+                equipManager->EquipObject(target, armor, nullptr, 1, equipSlot, false, forceEquip, false, true);
                 LOG(info,"Equipped {} on {}", armor->GetName(), target->GetName());
             }
         }
@@ -960,44 +979,7 @@ namespace OutfitSystem {
             return 0;
         }
 
-        std::vector<RE::TESObjectARMO*> outfitArmors;
-
-        // Iterate through outfit items and resolve them
-        for (const auto& outfitItem : outfit->second->outfitItems) {
-            // If the item is a leveled list, resolve its armors
-            if (outfitItem->Is(RE::FormType::LeveledItem)) {
-                // Cast to TESLevItem
-                RE::TESLevItem* levItem = outfitItem->As<RE::TESLevItem>();
-                if (levItem) {
-                    // Iterate through the leveled list entries
-                    for (const auto& outfitItem : outfit->second->outfitItems) {
-                        // If the item is a leveled list, resolve its armors
-                        if (outfitItem->Is(RE::FormType::LeveledItem)) {
-                            RE::TESLevItem* levItem = outfitItem->As<RE::TESLevItem>();
-                            if (levItem) {
-                                // Get player level - you may need to adjust how you get this
-                                std::uint16_t playerLevel = RE::PlayerCharacter::GetSingleton()->GetLevel();
-                                REUtilities::ResolveArmorLeveledList(levItem, outfitArmors, playerLevel);
-                            }
-                        }
-                        // If the item is an armor, add it directly
-                        else if (outfitItem->IsArmor()) {
-                            RE::TESObjectARMO* armor = outfitItem->As<RE::TESObjectARMO>();
-                            if (armor) {
-                                outfitArmors.push_back(armor);
-                            }
-                        }
-                    }
-                }
-            }
-            // If the item is an armor, add it directly
-            else if (outfitItem->IsArmor()) {
-                RE::TESObjectARMO* armor = outfitItem->As<RE::TESObjectARMO>();
-                if (armor) {
-                    outfitArmors.push_back(armor);
-                }
-            }
-        }
+        std::vector<RE::TESObjectARMO*> outfitArmors = REUtilities::OutfitToArmorList(outfit->second);
 
         try {
             OverwriteOutfit(registry, stackId, nullptr, outfit->first, outfitArmors);
@@ -1267,6 +1249,8 @@ namespace OutfitSystem {
         auto actors = service.listActors();
 
         for (auto& actor : actors) {
+            if (!actor || !actor->Is3DLoaded()) continue;
+
             auto location = identifyLocation(location_skse, weather_skse, actor);
             // Debug notifications for location classification.
             /*
