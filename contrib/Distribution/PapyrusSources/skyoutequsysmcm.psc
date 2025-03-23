@@ -1,4 +1,4 @@
-Scriptname SkyOutSysMCM extends SKI_ConfigBase Hidden
+Scriptname SkyOutEquSysMCM extends SKI_ConfigBase Hidden
 
 Int      _iOutfitBrowserPage   = 0
 Int      _iOutfitNameMaxBytes = 256 ; init option, should never change at run-time; can change if the DLL is revised appropriately
@@ -55,11 +55,11 @@ Function AddLocationOptions(Int[] aiIndices, String sHeaderKey)
    Int iIterator = 0
    
    While iIterator < iCount
-       String sLocationOutfit = SkyrimOutfitSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, aiIndices[iIterator])
+       String sLocationOutfit = SkyrimOutfitEquipmentSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, aiIndices[iIterator])
        If sLocationOutfit == ""
-           sLocationOutfit = "$SkyOutSys_AutoswitchEdit_None"
+           sLocationOutfit = "$SkyOutEquSys_AutoswitchEdit_None"
        EndIf
-       AddMenuOptionST("OPT_AutoswitchEntry" + aiIndices[iIterator], "$SkyOutSys_Text_Autoswitch" + aiIndices[iIterator], sLocationOutfit)
+       AddMenuOptionST("OPT_AutoswitchEntry" + aiIndices[iIterator], "$SkyOutEquSys_Text_Autoswitch" + aiIndices[iIterator], sLocationOutfit)
        iIterator = iIterator + 1
    EndWhile
 EndFunction
@@ -71,8 +71,8 @@ Int Function GetVersion()
 	Return GetModVersion()
 EndFunction
 
-SkyOutSysQuickslotManager Function GetQuickslotManager() Global
-   Return Quest.GetQuest("SkyrimOutfitSystemQuickslotManager") as SkyOutSysQuickslotManager
+SkyOutEquSysQuickslotManager Function GetQuickslotManager() Global
+   Return Quest.GetQuest("SkyrimOutfitEquipmentSystemQuickslotManager") as SkyOutEquSysQuickslotManager
 EndFunction
 
 Event OnGameReload()
@@ -82,24 +82,24 @@ Event OnConfigInit()
 EndEvent
 Event OnConfigOpen()
    InitializeOptions()
-   _iOutfitNameMaxBytes = SkyrimOutfitSystemNativeFuncs.GetOutfitNameMaxLength()
-   _sOutfitImporter_ModList = SkyrimOutfitSystemNativeFuncs.GetAllLoadedModsList()
+   _iOutfitNameMaxBytes = SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitNameMaxLength()
+   _sOutfitImporter_ModList = SkyrimOutfitEquipmentSystemNativeFuncs.GetAllLoadedModsList()
    ResetOutfitBrowser()
    ResetOutfitEditor()
    RefreshCache()
    ShowMessage("Max page outfits: " + _OutfitsPageMaxOutfits + " and Max submenu items" + _iSelectMenuMax)
 EndEvent
 Event OnConfigClose()
-   SkyrimOutfitSystemNativeFuncs.SetOutfitsUsingLocation(Game.GetPlayer().GetCurrentLocation(), Weather.GetCurrentWeather())
-   SkyrimOutfitSystemNativeFuncs.RefreshArmorForAllConfiguredActors()
+   SkyrimOutfitEquipmentSystemNativeFuncs.SetOutfitsUsingLocation(Game.GetPlayer().GetCurrentLocation(), Weather.GetCurrentWeather())
+   SkyrimOutfitEquipmentSystemNativeFuncs.RefreshArmorForAllConfiguredActors()
    ResetOutfitBrowser()
    ResetOutfitEditor()
 EndEvent
 Event OnPageReset(String asPage)
-   If asPage == "$SkyOutSys_MCM_Options"
+   If asPage == "$SkyOutEquSys_MCM_Options"
       ResetOutfitEditor()
       ShowOptions()
-   ElseIf asPage == "$SkyOutSys_MCM_OutfitList"
+   ElseIf asPage == "$SkyOutEquSys_MCM_OutfitList"
       If _sEditingOutfit
          ShowOutfitEditor()
       Else
@@ -134,10 +134,10 @@ Function FullRefresh()
 EndFunction
 
 Function RefreshCache()
-   _sOutfitNames    = SkyrimOutfitSystemNativeFuncs.ListOutfits()
-   _sSelectedOutfit = SkyrimOutfitSystemNativeFuncs.GetSelectedOutfit(_aCurrentActor)
+   _sOutfitNames    = SkyrimOutfitEquipmentSystemNativeFuncs.ListOutfits()
+   _sSelectedOutfit = SkyrimOutfitEquipmentSystemNativeFuncs.GetSelectedOutfit(_aCurrentActor)
    ;
-   _sOutfitNames = SkyrimOutfitSystemNativeFuncs.NaturalSort_ASCII(_sOutfitNames)
+   _sOutfitNames = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSort_ASCII(_sOutfitNames)
 
 
 EndFunction
@@ -171,7 +171,7 @@ EndFunction
       Return Math.LeftShift(1, aiSlot - 30)
    EndFunction
    String Function BodySlotName(Int aiSlot) Global
-      Return "$SkyOutSys_BodySlot" + aiSlot
+      Return "$SkyOutEquSys_BodySlot" + aiSlot
    EndFunction
    Function LogStringArrayForDebugging(String asPrefix, String[] asArray) Global
       Debug.Trace(asPrefix)
@@ -196,22 +196,22 @@ EndFunction
 ;/EndBlock/;
 
 Function SetupSlotDataForOutfit(String asOutfitName)
-   _kOutfitContents = SkyrimOutfitSystemNativeFuncs.GetOutfitContents(asOutfitName)
+   _kOutfitContents = SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitContents(asOutfitName)
    ;
    ; This process is doable in Papyrus, but not without a significant 
    ; performance hit. It's fast in the DLL.
    ;
-   SkyrimOutfitSystemNativeFuncs.PrepOutfitBodySlotListing(asOutfitName)
-   Int[] iSlots = SkyrimOutfitSystemNativeFuncs.GetOutfitBodySlotListingSlotIndices()
+   SkyrimOutfitEquipmentSystemNativeFuncs.PrepOutfitBodySlotListing(asOutfitName)
+   Int[] iSlots = SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitBodySlotListingSlotIndices()
    _sOutfitSlotNames = Utility.CreateStringArray(iSlots.Length)
    Int iIterator = 0
    While iIterator < iSlots.Length
       _sOutfitSlotNames[iIterator] = BodySlotName(iSlots[iIterator])
       iIterator = iIterator + 1
    EndWhile
-   _sOutfitSlotArmors = SkyrimOutfitSystemNativeFuncs.GetOutfitBodySlotListingArmorNames()
-   _kOutfitSlotArmors = SkyrimOutfitSystemNativeFuncs.GetOutfitBodySlotListingArmorForms()
-   SkyrimOutfitSystemNativeFuncs.ClearOutfitBodySlotListing()
+   _sOutfitSlotArmors = SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitBodySlotListingArmorNames()
+   _kOutfitSlotArmors = SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitBodySlotListingArmorForms()
+   SkyrimOutfitEquipmentSystemNativeFuncs.ClearOutfitBodySlotListing()
 EndFunction
 
 ;/Block/; ; Default handlers
@@ -227,9 +227,9 @@ EndFunction
          Int iEntryIndex = (_iOutfitEditorBodySlotPage*8) + (StringUtil.Substring(sState, 22) as Int)
          String sArmorName = _sOutfitSlotArmors[iEntryIndex]
          Armor  kArmorForm = _kOutfitSlotArmors[iEntryIndex]
-         Bool bDelete = ShowMessage("$SkyOutSys_Confirm_RemoveArmor_Text{" + sArmorName + "}", True, "$SkyOutSys_Confirm_RemoveArmor_Yes", "$SkyOutSys_Confirm_RemoveArmor_No")
+         Bool bDelete = ShowMessage("$SkyOutEquSys_Confirm_RemoveArmor_Text{" + sArmorName + "}", True, "$SkyOutEquSys_Confirm_RemoveArmor_Yes", "$SkyOutEquSys_Confirm_RemoveArmor_No")
          If bDelete
-            SkyrimOutfitSystemNativeFuncs.RemoveArmorFromOutfit(_sEditingOutfit, kArmorForm)
+            SkyrimOutfitEquipmentSystemNativeFuncs.RemoveArmorFromOutfit(_sEditingOutfit, kArmorForm)
             SetupSlotDataForOutfit(_sEditingOutfit)
             ForcePageReset()
          EndIf
@@ -280,22 +280,22 @@ EndFunction
           String[] sMenu = Utility.CreateStringArray(menuSize)
           
           ; Set cancel option
-          sMenu[0] = "$SkyOutSys_AutoswitchEdit_Cancel"
+          sMenu[0] = "$SkyOutEquSys_AutoswitchEdit_Cancel"
           
           ; Set None option
-          sMenu[1] = "$SkyOutSys_AutoswitchEdit_None"
+          sMenu[1] = "$SkyOutEquSys_AutoswitchEdit_None"
           
           ; Current position in the menu array
           Int menuIndex = 2
           
           ; Add navigation buttons
           If hasPrevPage
-              sMenu[menuIndex] = "$SkyOutSys_MCMText_PrevPageOption"
+              sMenu[menuIndex] = "$SkyOutEquSys_MCMText_PrevPageOption"
               menuIndex += 1
           EndIf
           
           If hasNextPage
-              sMenu[menuIndex] = "$SkyOutSys_MCMText_NextPageOption"
+              sMenu[menuIndex] = "$SkyOutEquSys_MCMText_NextPageOption"
               menuIndex += 1
           EndIf
           
@@ -336,8 +336,8 @@ EndFunction
          
          If aiIndex == 1 ; user wants no outfit
             Int iAutoswitchIndex = StringUtil.Substring(sState, 19) as Int
-            SkyrimOutfitSystemNativeFuncs.UnsetLocationOutfit(_aCurrentActor, iAutoswitchIndex)
-            SetMenuOptionValueST("$SkyOutSys_AutoswitchEdit_None")
+            SkyrimOutfitEquipmentSystemNativeFuncs.UnsetLocationOutfit(_aCurrentActor, iAutoswitchIndex)
+            SetMenuOptionValueST("$SkyOutEquSys_AutoswitchEdit_None")
             Return
          EndIf
          
@@ -348,7 +348,7 @@ EndFunction
          If hasPrevPage && aiIndex == navOffset
             _OutfitNamesPage -= 1
             SetMenuDialogOptions(new String[1]) ; Force menu to reopen
-            ShowMessage("$SkyOutSys_MCMText_PrevPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+            ShowMessage("$SkyOutEquSys_MCMText_PrevPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
             Return
          EndIf
          navOffset += hasPrevPage as Int ; Move offset if we have a prev button
@@ -357,7 +357,7 @@ EndFunction
          If hasNextPage && aiIndex == navOffset
             _OutfitNamesPage += 1
             SetMenuDialogOptions(new String[1]) ; Force menu to reopen
-            ShowMessage("$SkyOutSys_MCMText_NextPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+            ShowMessage("$SkyOutEquSys_MCMText_NextPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
             Return
          EndIf
          
@@ -367,8 +367,8 @@ EndFunction
             ; Set the requested outfit
             String sOutfitName = _sOutfitNames[outfitIndex]
             Int iAutoswitchIndex = StringUtil.Substring(sState, 19) as Int
-            SkyrimOutfitSystemNativeFuncs.SetLocationOutfit(_aCurrentActor, iAutoswitchIndex, sOutfitName)
-            SetMenuOptionValueST(SkyrimOutfitSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, iAutoswitchIndex))
+            SkyrimOutfitEquipmentSystemNativeFuncs.SetLocationOutfit(_aCurrentActor, iAutoswitchIndex, sOutfitName)
+            SetMenuOptionValueST(SkyrimOutfitEquipmentSystemNativeFuncs.GetLocationOutfit(_aCurrentActor, iAutoswitchIndex))
          EndIf
          Return
       EndIf
@@ -376,15 +376,15 @@ EndFunction
    Event OnHighlightST()
       String sState = GetState()
       If StringUtil.Substring(sState, 0, 19) == "OPT_AutoswitchEntry"
-         SetInfoText("$SkyOutSys_Desc_Autoswitch")
+         SetInfoText("$SkyOutEquSys_Desc_Autoswitch")
          Return
       EndIf
       If StringUtil.Substring(sState, 0, 16) == "OutfitList_Item_"
-         SetInfoText("$SkyOutSys_MCMInfoText_Outfit")
+         SetInfoText("$SkyOutEquSys_MCMInfoText_Outfit")
          Return
       EndIf
       If StringUtil.Substring(sState, 0, 22) == "OutfitEditor_BodySlot_"
-         SetInfoText("$SkyOutSys_MCMInfoText_BodySlot")
+         SetInfoText("$SkyOutEquSys_MCMInfoText_BodySlot")
          Return
       EndIf
    EndEvent
@@ -392,9 +392,9 @@ EndFunction
       String sState = GetState()
       If StringUtil.Substring(sState, 0, 19) == "OPT_AutoswitchEntry"
          Int iAutoswitchIndex = StringUtil.Substring(sState, 19) as Int
-         Bool bDelete = ShowMessage("$SkyOutSys_Confirm_UnsetAutoswitch_Text", True, "$SkyOutSys_Confirm_UnsetAutoswitch_Yes", "$SkyOutSys_Confirm_UnsetAutoswitch_No")
+         Bool bDelete = ShowMessage("$SkyOutEquSys_Confirm_UnsetAutoswitch_Text", True, "$SkyOutEquSys_Confirm_UnsetAutoswitch_Yes", "$SkyOutEquSys_Confirm_UnsetAutoswitch_No")
          If bDelete
-            SkyrimOutfitSystemNativeFuncs.UnsetLocationOutfit(_aCurrentActor, iAutoswitchIndex)
+            SkyrimOutfitEquipmentSystemNativeFuncs.UnsetLocationOutfit(_aCurrentActor, iAutoswitchIndex)
             SetMenuOptionValueST("")
          EndIf
          Return
@@ -407,61 +407,61 @@ EndFunction
       ;/Block/; ; Left column
          SetCursorFillMode(TOP_TO_BOTTOM)
          SetCursorPosition(0)
-         If SKSE.GetPluginVersion("SkyrimOutfitSystemNG") == -1
-            AddHeaderOption("$SkyOutSys_Text_WarningHeader")
+         If SKSE.GetPluginVersion("SkyrimOutfitEquipmentSystemNG") == -1
+            AddHeaderOption("$SkyOutEquSys_Text_WarningHeader")
             return
          EndIf
-         AddToggleOptionST("OPT_Enabled", "$Enabled", SkyrimOutfitSystemNativeFuncs.IsEnabled())
-         AddMenuOptionST("OPT_SelectActorSelection", "$SkyOutSys_Text_SelectActorSelection", _aCurrentActor.GetBaseObject().GetName())
+         AddToggleOptionST("OPT_Enabled", "$Enabled", SkyrimOutfitEquipmentSystemNativeFuncs.IsEnabled())
+         AddMenuOptionST("OPT_SelectActorSelection", "$SkyOutEquSys_Text_SelectActorSelection", _aCurrentActor.GetBaseObject().GetName())
          AddEmptyOption()
          ;
          ; Quickslots:
          ;
-         SkyOutSysQuickslotManager kQM = GetQuickslotManager()
-         AddHeaderOption("$SkyOutSys_MCMHeader_Quickslots")
-         AddToggleOptionST("OPT_QuickslotsEnabled", "$SkyOutSys_Text_EnableQuickslots", kQM.GetEnabled())
+         SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
+         AddHeaderOption("$SkyOutEquSys_MCMHeader_Quickslots")
+         AddToggleOptionST("OPT_QuickslotsEnabled", "$SkyOutEquSys_Text_EnableQuickslots", kQM.GetEnabled())
          AddEmptyOption()
          ;
          ; Active actor selection
          ;
-         AddHeaderOption("$SkyOutSys_Text_ActiveActorHeader")
-         AddMenuOptionST("OPT_AddActorSelection", "$SkyOutSys_Text_AddActorSelection", "")
-         AddMenuOptionST("OPT_RemoveActorSelection", "$SkyOutSys_Text_RemoveActorSelection", "")
+         AddHeaderOption("$SkyOutEquSys_Text_ActiveActorHeader")
+         AddMenuOptionST("OPT_AddActorSelection", "$SkyOutEquSys_Text_AddActorSelection", "")
+         AddMenuOptionST("OPT_RemoveActorSelection", "$SkyOutEquSys_Text_RemoveActorSelection", "")
          AddEmptyOption()
          ;
          ; Setting import/export
          ;
-         AddHeaderOption("$SkyOutSys_Text_SettingExportImport")
-         AddTextOptionST ("OPT_ExportSettings", "$SkyOutSys_Text_Export", "")
-         AddTextOptionST ("OPT_ImportSettings", "$SkyOutSys_Text_Import", "")
+         AddHeaderOption("$SkyOutEquSys_Text_SettingExportImport")
+         AddTextOptionST ("OPT_ExportSettings", "$SkyOutEquSys_Text_Export", "")
+         AddTextOptionST ("OPT_ImportSettings", "$SkyOutEquSys_Text_Import", "")
       ;/EndBlock/;
       ;/Block/; ; Right column
          SetCursorPosition(1)
 
-         AddLocationOptions(SkyrimOutfitSystemNativeFuncs.GetAutoSwitchActionBasedLocationArray(), "$SkyOutSys_MCMHeader_Autoswitch_Action")
-         AddLocationOptions(SkyrimOutfitSystemNativeFuncs.GetAutoSwitchGenericLocationArray(), "$SkyOutSys_MCMHeader_Autoswitch_Generic") 
-         AddLocationOptions(SkyrimOutfitSystemNativeFuncs.GetAutoSwitchSpecificLocationArray(), "$SkyOutSys_MCMHeader_Autoswitch_Specific")
+         AddLocationOptions(SkyrimOutfitEquipmentSystemNativeFuncs.GetAutoSwitchActionBasedLocationArray(), "$SkyOutEquSys_MCMHeader_Autoswitch_Action")
+         AddLocationOptions(SkyrimOutfitEquipmentSystemNativeFuncs.GetAutoSwitchGenericLocationArray(), "$SkyOutEquSys_MCMHeader_Autoswitch_Generic")
+         AddLocationOptions(SkyrimOutfitEquipmentSystemNativeFuncs.GetAutoSwitchSpecificLocationArray(), "$SkyOutEquSys_MCMHeader_Autoswitch_Specific")
       ;/EndBlock/;
 
    EndFunction
    ;
    State OPT_Enabled
       Event OnSelectST()
-         Bool bToggle = !SkyrimOutfitSystemNativeFuncs.IsEnabled()
-         SkyrimOutfitSystemNativeFuncs.SetEnabled(bToggle)
+         Bool bToggle = !SkyrimOutfitEquipmentSystemNativeFuncs.IsEnabled()
+         SkyrimOutfitEquipmentSystemNativeFuncs.SetEnabled(bToggle)
          SetToggleOptionValueST(bToggle)
       EndEvent
    EndState
    State OPT_AddActorSelection
       Event OnMenuOpenST()
-         _kActorSelection_SelectCandidates = SkyrimOutfitSystemNativeFuncs.ActorNearPC()
+         _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ActorNearPC()
          String[] kActorNames = Utility.CreateStringArray(_kActorSelection_SelectCandidates.Length)
          Int iIterator = 0
          While iIterator < _kActorSelection_SelectCandidates.Length
             kActorNames[iIterator] = _kActorSelection_SelectCandidates[iIterator].GetActorBase().GetName()
             iIterator = iIterator + 1
          EndWhile
-         String[] sMenu = PrependStringToArray(kActorNames, "$SkyOutSys_OEdit_AddCancel")
+         String[] sMenu = PrependStringToArray(kActorNames, "$SkyOutEquSys_OEdit_AddCancel")
          SetMenuDialogOptions(sMenu)
          SetMenuDialogStartIndex(0)
          SetMenuDialogDefaultIndex(0)
@@ -470,17 +470,17 @@ EndFunction
          If aiIndex == 0 || aiIndex > _kActorSelection_SelectCandidates.Length
             return
          Endif
-         SkyrimOutfitSystemNativeFuncs.AddActor(_kActorSelection_SelectCandidates[aiIndex - 1])
+         SkyrimOutfitEquipmentSystemNativeFuncs.AddActor(_kActorSelection_SelectCandidates[aiIndex - 1])
       EndEvent
       Event OnDefaultST()
       EndEvent
       Event OnHighlightST()
-         SetInfoText("$SkyOutSys_Desc_AddActor")
+         SetInfoText("$SkyOutEquSys_Desc_AddActor")
       EndEvent
    EndState
    State OPT_RemoveActorSelection
       Event OnMenuOpenST()
-         _kActorSelection_SelectCandidates = SkyrimOutfitSystemNativeFuncs.ListActors()
+         _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ListActors()
          String[] kActorNames = Utility.CreateStringArray(_kActorSelection_SelectCandidates.Length)
          Int iIterator = 0
          While iIterator < _kActorSelection_SelectCandidates.Length
@@ -490,7 +490,7 @@ EndFunction
             Endif
             iIterator = iIterator + 1
          EndWhile
-         String[] sMenu = PrependStringToArray(kActorNames, "$SkyOutSys_OEdit_AddCancel")
+         String[] sMenu = PrependStringToArray(kActorNames, "$SkyOutEquSys_OEdit_AddCancel")
          SetMenuDialogOptions(sMenu)
          SetMenuDialogStartIndex(0)
          SetMenuDialogDefaultIndex(0)
@@ -502,25 +502,25 @@ EndFunction
          If _kActorSelection_SelectCandidates[aiIndex - 1] == Game.GetPlayer()
             return
          Endif
-         SkyrimOutfitSystemNativeFuncs.RemoveActor(_kActorSelection_SelectCandidates[aiIndex - 1])
-         SkyrimOutfitSystemNativeFuncs.RefreshArmorFor(_kActorSelection_SelectCandidates[aiIndex - 1])
+         SkyrimOutfitEquipmentSystemNativeFuncs.RemoveActor(_kActorSelection_SelectCandidates[aiIndex - 1])
+         SkyrimOutfitEquipmentSystemNativeFuncs.RefreshArmorFor(_kActorSelection_SelectCandidates[aiIndex - 1])
       EndEvent
       Event OnDefaultST()
       EndEvent
       Event OnHighlightST()
-         SetInfoText("$SkyOutSys_Desc_RemoveActor")
+         SetInfoText("$SkyOutEquSys_Desc_RemoveActor")
       EndEvent
    EndState
    State OPT_SelectActorSelection
       Event OnMenuOpenST()
-         _kActorSelection_SelectCandidates = SkyrimOutfitSystemNativeFuncs.ListActors()
+         _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ListActors()
          String[] kActorNames = Utility.CreateStringArray(_kActorSelection_SelectCandidates.Length)
          Int iIterator = 0
          While iIterator < _kActorSelection_SelectCandidates.Length
             kActorNames[iIterator] = _kActorSelection_SelectCandidates[iIterator].GetActorBase().GetName()
             iIterator = iIterator + 1
          EndWhile
-         String[] sMenu = PrependStringToArray(kActorNames, "$SkyOutSys_OEdit_AddCancel")
+         String[] sMenu = PrependStringToArray(kActorNames, "$SkyOutEquSys_OEdit_AddCancel")
          SetMenuDialogOptions(sMenu)
          SetMenuDialogStartIndex(0)
          SetMenuDialogDefaultIndex(0)
@@ -536,35 +536,35 @@ EndFunction
       Event OnDefaultST()
       EndEvent
       Event OnHighlightST()
-         SetInfoText("$SkyOutSys_Desc_ActorSelect")
+         SetInfoText("$SkyOutEquSys_Desc_ActorSelect")
       EndEvent
    EndState
    State OPT_QuickslotsEnabled
       Event OnSelectST()
-         SkyOutSysQuickslotManager kQM = GetQuickslotManager()
+         SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
          kQM.SetEnabled(!kQM.GetEnabled())
          SetToggleOptionValueST(kQM.GetEnabled())
       EndEvent
       Event OnHighlightST()
-         SetInfoText("$SkyOutSys_Desc_EnableQuickslots")
+         SetInfoText("$SkyOutEquSys_Desc_EnableQuickslots")
       EndEvent
    EndState
 
    State OPT_ImportSettings
       Event OnSelectST()
-         SkyrimOutfitSystemNativeFuncs.ImportSettings()
+         SkyrimOutfitEquipmentSystemNativeFuncs.ImportSettings()
          FullRefresh()
       EndEvent
       Event OnHighlightST()
-         SetInfoText("$SkyOutSys_Desc_Import")
+         SetInfoText("$SkyOutEquSys_Desc_Import")
       EndEvent
    EndState
    State OPT_ExportSettings
       Event OnSelectST()
-         SkyrimOutfitSystemNativeFuncs.ExportSettings()
+         SkyrimOutfitEquipmentSystemNativeFuncs.ExportSettings()
       EndEvent
       Event OnHighlightST()
-         SetInfoText("$SkyOutSys_Desc_Export")
+         SetInfoText("$SkyOutEquSys_Desc_Export")
       EndEvent
    EndState
 ;/EndBlock/;
@@ -588,7 +588,7 @@ EndFunction
          SetCursorFillMode(TOP_TO_BOTTOM)
          ;/Block/; ; Left column
             SetCursorPosition(0)
-            AddHeaderOption("$SkyOutSys_MCMHeader_OutfitList")
+            AddHeaderOption("$SkyOutEquSys_MCMHeader_OutfitList")
 
             Int iCount
             Int iPageCount
@@ -614,12 +614,12 @@ EndFunction
                   String sName = _sOutfitNames[iIterator + iOffset]
                   String sMark = " "
                   If sName == _sSelectedOutfit
-                     sMark = "$SkyOutSys_OutfitBrowser_ActiveMark"
+                     sMark = "$SkyOutEquSys_OutfitBrowser_ActiveMark"
                      If sName == _sOutfitShowingContextMenu
-                        sMark = "$SkyOutSys_OutfitBrowser_ContextActiveMark"
+                        sMark = "$SkyOutEquSys_OutfitBrowser_ContextActiveMark"
                      EndIf
                   ElseIf sName == _sOutfitShowingContextMenu
-                     sMark = "$SkyOutSys_OutfitBrowser_ContextMark"
+                     sMark = "$SkyOutEquSys_OutfitBrowser_ContextMark"
                   EndIf
                   AddTextOptionST("OutfitList_Item_" + sName, sName, sMark)
                   iIterator = iIterator + 1
@@ -638,12 +638,12 @@ EndFunction
                   String sName = _sOutfitNames[iIterator]
                   String sMark = " "
                   If sName == _sSelectedOutfit
-                     sMark = "$SkyOutSys_OutfitBrowser_ActiveMark"
+                     sMark = "$SkyOutEquSys_OutfitBrowser_ActiveMark"
                      If sName == _sOutfitShowingContextMenu
-                        sMark = "$SkyOutSys_OutfitBrowser_ContextActiveMark"
+                        sMark = "$SkyOutEquSys_OutfitBrowser_ContextActiveMark"
                      EndIf
                   ElseIf sName == _sOutfitShowingContextMenu
-                     sMark = "$SkyOutSys_OutfitBrowser_ContextMark"
+                     sMark = "$SkyOutEquSys_OutfitBrowser_ContextMark"
                   EndIf
                   AddTextOptionST("OutfitList_Item_" + sName, sName, sMark)
                   iIterator = iIterator + 1
@@ -655,36 +655,36 @@ EndFunction
 
             If _sOutfitNames.Length > _OutfitsPageMaxOutfits
                AddHeaderOption("")
-               AddTextOptionST("OutfitBrowser_Prev", "$SkyOutSys_MCMText_OutfitListPageNumber{" + (_iOutfitBrowserPage + 1) + "}{" + iPageCount + "}", "$SkyOutSys_MCMText_OutfitListButtonPagePrev", iFlagsPrev)
-               AddTextOptionST("OutfitBrowser_Next", "", "$SkyOutSys_MCMText_OutfitListButtonPageNext", iFlagsNext)
+               AddTextOptionST("OutfitBrowser_Prev", "$SkyOutEquSys_MCMText_OutfitListPageNumber{" + (_iOutfitBrowserPage + 1) + "}{" + iPageCount + "}", "$SkyOutEquSys_MCMText_OutfitListButtonPagePrev", iFlagsPrev)
+               AddTextOptionST("OutfitBrowser_Next", "", "$SkyOutEquSys_MCMText_OutfitListButtonPageNext", iFlagsNext)
             EndIf
 
-            AddHeaderOption("$SkyOutSys_MCMHeader_GeneralActions")
-            AddInputOptionST("OutfitContext_New", "$SkyOutSys_OContext_New", "")
-            AddInputOptionST("OutfitContext_NewFromWorn", "$SkyOutSys_OContext_NewFromWorn", "")
+            AddHeaderOption("$SkyOutEquSys_MCMHeader_GeneralActions")
+            AddInputOptionST("OutfitContext_New", "$SkyOutEquSys_OContext_New", "")
+            AddInputOptionST("OutfitContext_NewFromWorn", "$SkyOutEquSys_OContext_NewFromWorn", "")
 
-            AddMenuOptionST("OutfitContext_SelectImportMod", "$SkyOutSys_OContext_SelectImportMod", _sOutfitImporter_SelectedMod)
-            AddMenuOptionST("OutfitContext_ImportOutfitFromMod", "$SkyOutSys_OContext_ImportOutfitsFromMod", "")
+            AddMenuOptionST("OutfitContext_SelectImportMod", "$SkyOutEquSys_OContext_SelectImportMod", _sOutfitImporter_SelectedMod)
+            AddMenuOptionST("OutfitContext_ImportOutfitFromMod", "$SkyOutEquSys_OContext_ImportOutfitsFromMod", "")
             ;
             Int iContextFlags = OPTION_FLAG_HIDDEN
             If _sOutfitShowingContextMenu
                iContextFlags = OPTION_FLAG_NONE
             EndIf
-            AddHeaderOption("$SkyOutSys_MCMHeader_OutfitActions{" + _sOutfitShowingContextMenu + "}", iContextFlags)
+            AddHeaderOption("$SkyOutEquSys_MCMHeader_OutfitActions{" + _sOutfitShowingContextMenu + "}", iContextFlags)
             If _sSelectedOutfit == _sOutfitShowingContextMenu
-               AddTextOptionST("OutfitContext_Toggle", "$SkyOutSys_OContext_ToggleOff", "", iContextFlags)
+               AddTextOptionST("OutfitContext_Toggle", "$SkyOutEquSys_OContext_ToggleOff", "", iContextFlags)
             Else
-               AddTextOptionST("OutfitContext_Toggle", "$SkyOutSys_OContext_ToggleOn", "", iContextFlags)
+               AddTextOptionST("OutfitContext_Toggle", "$SkyOutEquSys_OContext_ToggleOn", "", iContextFlags)
             EndIf
             ; TODO MINOR BUG: Emits warning when no outfit is selected, esp when there are no outfits in the list.
-            If SkyrimOutfitSystemNativeFuncs.GetOutfitFavoriteStatus(_sOutfitShowingContextMenu)
-               AddTextOptionST("OutfitContext_Favorite", "$SkyOutSys_OContext_ToggleFavoriteOff", "", iContextFlags)
+            If SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitFavoriteStatus(_sOutfitShowingContextMenu)
+               AddTextOptionST("OutfitContext_Favorite", "$SkyOutEquSys_OContext_ToggleFavoriteOff", "", iContextFlags)
             Else
-               AddTextOptionST("OutfitContext_Favorite", "$SkyOutSys_OContext_ToggleFavoriteOn", "", iContextFlags)
+               AddTextOptionST("OutfitContext_Favorite", "$SkyOutEquSys_OContext_ToggleFavoriteOn", "", iContextFlags)
             EndIf
-            AddTextOptionST ("OutfitContext_Edit",   "$SkyOutSys_OContext_Edit",   "", iContextFlags)
-            AddInputOptionST("OutfitContext_Rename", "$SkyOutSys_OContext_Rename", "", iContextFlags)
-            AddTextOptionST ("OutfitContext_Delete", "$SkyOutSys_OContext_Delete", "", iContextFlags)
+            AddTextOptionST ("OutfitContext_Edit",   "$SkyOutEquSys_OContext_Edit",   "", iContextFlags)
+            AddInputOptionST("OutfitContext_Rename", "$SkyOutEquSys_OContext_Rename", "", iContextFlags)
+            AddTextOptionST ("OutfitContext_Delete", "$SkyOutEquSys_OContext_Delete", "", iContextFlags)
          ;/EndBlock/;
       EndFunction
       State OutfitBrowser_Prev
@@ -708,14 +708,14 @@ EndFunction
                Return
             EndIf
             If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
-               ShowMessage("$SkyOutSys_Err_OutfitNameTooLong", False, "$SkyOutSys_ErrDismiss")
+               ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
                Return
             EndIf
-            If SkyrimOutfitSystemNativeFuncs.OutfitExists(asTextEntry)
-               ShowMessage("$SkyOutSys_Err_OutfitNameTaken", False, "$SkyOutSys_ErrDismiss")
+            If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
+               ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
                Return
             EndIf
-            SkyrimOutfitSystemNativeFuncs.CreateOutfit(asTextEntry)
+            SkyrimOutfitEquipmentSystemNativeFuncs.CreateOutfit(asTextEntry)
             RefreshCache()
             StartEditingOutfit(asTextEntry)
          EndEvent
@@ -729,15 +729,15 @@ EndFunction
                Return
             EndIf
             If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
-               ShowMessage("$SkyOutSys_Err_OutfitNameTooLong", False, "$SkyOutSys_ErrDismiss")
+               ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
                Return
             EndIf
-            If SkyrimOutfitSystemNativeFuncs.OutfitExists(asTextEntry)
-               ShowMessage("$SkyOutSys_Err_OutfitNameTaken", False, "$SkyOutSys_ErrDismiss")
+            If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
+               ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
                Return
             EndIf
-            Armor[] kList = SkyrimOutfitSystemNativeFuncs.GetWornItems(Game.GetPlayer())
-            SkyrimOutfitSystemNativeFuncs.OverwriteOutfit(asTextEntry, kList)
+            Armor[] kList = SkyrimOutfitEquipmentSystemNativeFuncs.GetWornItems(Game.GetPlayer())
+            SkyrimOutfitEquipmentSystemNativeFuncs.OverwriteOutfit(asTextEntry, kList)
             RefreshCache()
             StartEditingOutfit(asTextEntry)
          EndEvent
@@ -782,19 +782,19 @@ EndFunction
             
             ; Create menu array with exact size
             String[] sMenu = Utility.CreateStringArray(menuSize)
-            sMenu[0] = "$SkyOutSys_OEdit_AddCancel" ; First option is always cancel
+            sMenu[0] = "$SkyOutEquSys_OEdit_AddCancel" ; First option is always cancel
             
             ; Current position in the menu array
             Int menuIndex = 1
             
             ; Add navigation buttons
             If hasPrevPage
-                sMenu[menuIndex] = "$SkyOutSys_MCMText_PrevPageOption"
+                sMenu[menuIndex] = "$SkyOutEquSys_MCMText_PrevPageOption"
                 menuIndex += 1
             EndIf
             
             If hasNextPage
-                sMenu[menuIndex] = "$SkyOutSys_MCMText_NextPageOption"
+                sMenu[menuIndex] = "$SkyOutEquSys_MCMText_NextPageOption"
                 menuIndex += 1
             EndIf
             
@@ -838,7 +838,7 @@ EndFunction
             If hasPrevPage && aiIndex == navOffset
                _OutfitImportModPage -= 1
                SetMenuDialogOptions(new String[1]) ; Force menu to reopen
-               ShowMessage("$SkyOutSys_MCMText_PrevPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+               ShowMessage("$SkyOutEquSys_MCMText_PrevPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
                Return
             EndIf
             navOffset += hasPrevPage as Int ; Move offset if we have a prev button
@@ -847,7 +847,7 @@ EndFunction
             If hasNextPage && aiIndex == navOffset
                _OutfitImportModPage += 1
                SetMenuDialogOptions(new String[1]) ; Force menu to reopen
-               ShowMessage("$SkyOutSys_MCMText_NextPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+               ShowMessage("$SkyOutEquSys_MCMText_NextPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
                Return
             EndIf
             
@@ -861,13 +861,13 @@ EndFunction
             SetMenuOptionValueST(_sOutfitImporter_SelectedMod)
 
             ; Add the candidates
-            _sOutfitImporter_AddOutfitsForModCandidates = SkyrimOutfitSystemNativeFuncs.GetAllLoadedOutfitsForMod(_sOutfitImporter_SelectedMod)
+            _sOutfitImporter_AddOutfitsForModCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.GetAllLoadedOutfitsForMod(_sOutfitImporter_SelectedMod)
          EndEvent
          
          Event OnHighlightST()                        
             ; Add page info to the highlight text
             Int iTotalModPages = (_sOutfitImporter_ModList.Length + _iSelectMenuMax - 1) / _iSelectMenuMax
-            SetInfoText("$SkyOutSys_OContext_SelectImportModHighlight{" + _OutfitImportModPage + "}{" + iTotalModPages + "}{"+ _sOutfitImporter_ModList.Length + "}")
+            SetInfoText("$SkyOutEquSys_OContext_SelectImportModHighlight{" + _OutfitImportModPage + "}{" + iTotalModPages + "}{"+ _sOutfitImporter_ModList.Length + "}")
          EndEvent
       EndState     
 
@@ -914,13 +914,13 @@ EndFunction
             String[] sMenu = Utility.CreateStringArray(menuSize)
             
             ; Set cancel option
-            sMenu[0] = "$SkyOutSys_OEdit_AddCancel"
+            sMenu[0] = "$SkyOutEquSys_OEdit_AddCancel"
             
             ; Set Load All Outfits option
             If totalOutfits > 0
-               sMenu[1] = "$SkyOutSys_OEdit_LoadAllOutfits"
+               sMenu[1] = "$SkyOutEquSys_OEdit_LoadAllOutfits"
             Else 
-               sMenu[1] = "$SkyOutSys_OEdit_NoOutfitsToLoad"
+               sMenu[1] = "$SkyOutEquSys_OEdit_NoOutfitsToLoad"
             EndIf 
             
             ; Current position in the menu array
@@ -928,12 +928,12 @@ EndFunction
             
             ; Add navigation buttons
             If hasPrevPage
-                sMenu[menuIndex] = "$SkyOutSys_MCMText_PrevPageOption"
+                sMenu[menuIndex] = "$SkyOutEquSys_MCMText_PrevPageOption"
                 menuIndex += 1
             EndIf
             
             If hasNextPage
-                sMenu[menuIndex] = "$SkyOutSys_MCMText_NextPageOption"
+                sMenu[menuIndex] = "$SkyOutEquSys_MCMText_NextPageOption"
                 menuIndex += 1
             EndIf
             
@@ -972,13 +972,13 @@ EndFunction
              ; Check if "Load All Outfits" option was selected (index 1)
              If aiIndex == 1
                  ; Use the native function to add all outfits from the mod
-                 Int addedCount = SkyrimOutfitSystemNativeFuncs.AddAllOutfitsFromModToOutfitList(_sOutfitImporter_SelectedMod)
+                 Int addedCount = SkyrimOutfitEquipmentSystemNativeFuncs.AddAllOutfitsFromModToOutfitList(_sOutfitImporter_SelectedMod)
                  
                  If addedCount > 0
-                     ShowMessage("$SkyOutSys_OContext_ImportAllOutfitsFromMod_Success{" + addedCount + "}{" + _sOutfitImporter_SelectedMod + "}", False, "$SkyOutSys_MessageDismiss")
+                     ShowMessage("$SkyOutEquSys_OContext_ImportAllOutfitsFromMod_Success{" + addedCount + "}{" + _sOutfitImporter_SelectedMod + "}", False, "$SkyOutEquSys_MessageDismiss")
                      FullRefresh()
                  Else
-                     ShowMessage("$SkyOutSys_OContext_ImportAllOutfitsFromMod_Failure{" + _sOutfitImporter_SelectedMod + "}", False, "$SkyOutSys_MessageDismiss")
+                     ShowMessage("$SkyOutEquSys_OContext_ImportAllOutfitsFromMod_Failure{" + _sOutfitImporter_SelectedMod + "}", False, "$SkyOutEquSys_MessageDismiss")
                  EndIf
                  
                  Return
@@ -991,7 +991,7 @@ EndFunction
              If hasPrevPage && aiIndex == navOffset
                  _OutfitImportOutfitsForModPage -= 1
                  SetMenuDialogOptions(new String[1]) ; Force menu to reopen
-                 ShowMessage("$SkyOutSys_MCMText_PrevPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+                 ShowMessage("$SkyOutEquSys_MCMText_PrevPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
                  Return
              EndIf
              navOffset += hasPrevPage as Int ; Move offset if we have a prev button
@@ -1000,7 +1000,7 @@ EndFunction
              If hasNextPage && aiIndex == navOffset
                  _OutfitImportOutfitsForModPage += 1
                  SetMenuDialogOptions(new String[1]) ; Force menu to reopen
-                 ShowMessage("$SkyOutSys_MCMText_NextPageOptionMessage", False, "$SkyOutSys_MessageDismiss")
+                 ShowMessage("$SkyOutEquSys_MCMText_NextPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
                  Return
              EndIf
              
@@ -1013,13 +1013,13 @@ EndFunction
                  ; Here handle the selected outfit
                  SelectedOutfitEditorFormID = _sOutfitImporter_AddOutfitsForModCandidates[outfitIndex]
                  SetMenuOptionValueST(SelectedOutfitEditorFormID)
-                 OutfitAddStatus = SkyrimOutfitSystemNativeFuncs.AddOutfitFromModToOutfitList(_sOutfitImporter_SelectedMod, SelectedOutfitEditorFormID)
+                 OutfitAddStatus = SkyrimOutfitEquipmentSystemNativeFuncs.AddOutfitFromModToOutfitList(_sOutfitImporter_SelectedMod, SelectedOutfitEditorFormID)
                  
                  If OutfitAddStatus == 1
-                     ShowMessage("$SkyOutSys_OContext_ImportOutfitsFromMod_Success{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutSys_MessageDismiss")
+                     ShowMessage("$SkyOutEquSys_OContext_ImportOutfitsFromMod_Success{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutEquSys_MessageDismiss")
                      FullRefresh()
                  Else 
-                     ShowMessage("$SkyOutSys_OContext_ImportOutfitsFromMod_Failure{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutSys_MessageDismiss")
+                     ShowMessage("$SkyOutEquSys_OContext_ImportOutfitsFromMod_Failure{"+SelectedOutfitEditorFormID+"}{"+_sOutfitImporter_SelectedMod+"}", False, "$SkyOutEquSys_MessageDismiss")
                  EndIf
              EndIf
          EndEvent
@@ -1029,9 +1029,9 @@ EndFunction
              Int _iTotalOutfitForModPages = (_sOutfitImporter_AddOutfitsForModCandidates.Length + _iSelectMenuMax - 1) / _iSelectMenuMax
 
              If _sOutfitImporter_SelectedMod == ""
-                 SetInfoText("$SkyOutSys_OContext_ImportOutfitsFromMod")
+                 SetInfoText("$SkyOutEquSys_OContext_ImportOutfitsFromMod")
              Else 
-                 SetInfoText("$SkyOutSys_OContext_ImportOutfitsFromModHighlight{" + _sOutfitImporter_SelectedMod + "}{"+ _OutfitImportOutfitsForModPage + "}{" + _iTotalOutfitForModPages + "}{"+ _sOutfitImporter_AddOutfitsForModCandidates.Length + "}")
+                 SetInfoText("$SkyOutEquSys_OContext_ImportOutfitsFromModHighlight{" + _sOutfitImporter_SelectedMod + "}{"+ _OutfitImportOutfitsForModPage + "}{" + _iTotalOutfitForModPages + "}{"+ _sOutfitImporter_AddOutfitsForModCandidates.Length + "}")
              EndIf
          EndEvent
      EndState
@@ -1039,9 +1039,9 @@ EndFunction
       State OutfitContext_Toggle
          Event OnSelectST()
             If _sSelectedOutfit == _sOutfitShowingContextMenu
-               SkyrimOutfitSystemNativeFuncs.SetSelectedOutfit(_aCurrentActor, "")
+               SkyrimOutfitEquipmentSystemNativeFuncs.SetSelectedOutfit(_aCurrentActor, "")
             Else
-               SkyrimOutfitSystemNativeFuncs.SetSelectedOutfit(_aCurrentActor, _sOutfitShowingContextMenu)
+               SkyrimOutfitEquipmentSystemNativeFuncs.SetSelectedOutfit(_aCurrentActor, _sOutfitShowingContextMenu)
             EndIf
             RefreshCache()
             ForcePageReset()
@@ -1049,10 +1049,10 @@ EndFunction
       EndState
       State OutfitContext_Favorite
          Event OnSelectST()
-            If SkyrimOutfitSystemNativeFuncs.GetOutfitFavoriteStatus(_sOutfitShowingContextMenu)
-               SkyrimOutfitSystemNativeFuncs.SetOutfitFavoriteStatus(_sOutfitShowingContextMenu, false)
+            If SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitFavoriteStatus(_sOutfitShowingContextMenu)
+               SkyrimOutfitEquipmentSystemNativeFuncs.SetOutfitFavoriteStatus(_sOutfitShowingContextMenu, false)
             Else
-               SkyrimOutfitSystemNativeFuncs.SetOutfitFavoriteStatus(_sOutfitShowingContextMenu, true)
+               SkyrimOutfitEquipmentSystemNativeFuncs.SetOutfitFavoriteStatus(_sOutfitShowingContextMenu, true)
             EndIf
             RefreshCache()
             ForcePageReset()
@@ -1075,14 +1075,14 @@ EndFunction
                Return
             EndIf
             If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
-               ShowMessage("$SkyOutSys_Err_OutfitNameTooLong", False, "$SkyOutSys_ErrDismiss")
+               ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
                Return
             EndIf
-            If SkyrimOutfitSystemNativeFuncs.OutfitExists(asTextEntry)
-               ShowMessage("$SkyOutSys_Err_OutfitNameTaken", False, "$SkyOutSys_ErrDismiss")
+            If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
+               ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
                Return
             EndIf
-            Bool bSuccess = SkyrimOutfitSystemNativeFuncs.RenameOutfit(_sOutfitShowingContextMenu, asTextEntry)
+            Bool bSuccess = SkyrimOutfitEquipmentSystemNativeFuncs.RenameOutfit(_sOutfitShowingContextMenu, asTextEntry)
             If bSuccess
                _sOutfitShowingContextMenu = asTextEntry
                RefreshCache()
@@ -1090,7 +1090,7 @@ EndFunction
             EndIf
          EndEvent
          Event OnHighlightST()
-            SetInfoText("$SkyOutSys_MCMInfoText_RenameOutfit{" + _sOutfitShowingContextMenu + "}")
+            SetInfoText("$SkyOutEquSys_MCMInfoText_RenameOutfit{" + _sOutfitShowingContextMenu + "}")
          EndEvent
       EndState
       State OutfitContext_Delete
@@ -1098,16 +1098,16 @@ EndFunction
             If !_sOutfitShowingContextMenu
                Return
             EndIf
-            Bool bDelete = ShowMessage("$SkyOutSys_Confirm_Delete_Text{" + _sOutfitShowingContextMenu + "}", True, "$SkyOutSys_Confirm_Delete_Yes", "$SkyOutSys_Confirm_Delete_No")
+            Bool bDelete = ShowMessage("$SkyOutEquSys_Confirm_Delete_Text{" + _sOutfitShowingContextMenu + "}", True, "$SkyOutEquSys_Confirm_Delete_Yes", "$SkyOutEquSys_Confirm_Delete_No")
             If bDelete
-               SkyrimOutfitSystemNativeFuncs.DeleteOutfit(_sOutfitShowingContextMenu)
+               SkyrimOutfitEquipmentSystemNativeFuncs.DeleteOutfit(_sOutfitShowingContextMenu)
                ;
                RefreshCache()
                StopEditingOutfit()
             EndIf
          EndEvent
          Event OnHighlightST()
-            SetInfoText("$SkyOutSys_MCMInfoText_DeleteOutfit{" + _sOutfitShowingContextMenu + "}")
+            SetInfoText("$SkyOutEquSys_MCMInfoText_DeleteOutfit{" + _sOutfitShowingContextMenu + "}")
          EndEvent
       EndState
    ;/EndBlock/;
@@ -1116,16 +1116,16 @@ EndFunction
          SetCursorFillMode(TOP_TO_BOTTOM)
          ;/Block/; ; Left column
             SetCursorPosition(0)
-            AddHeaderOption ("$SkyOutSys_MCMHeader_OutfitEditor{" + _sEditingOutfit + "}")
-            AddTextOptionST ("OutfitEditor_Back",           "$SkyOutSys_OEdit_Back", "")
-            AddMenuOptionST ("OutfitEditor_AddFromCarried", "$SkyOutSys_OEdit_AddFromCarried", "")
-            AddMenuOptionST ("OutfitEditor_AddFromWorn",    "$SkyOutSys_OEdit_AddFromWorn", "")
-            AddInputOptionST("OutfitEditor_AddByID",        "$SkyOutSys_OEdit_AddByID", "")
+            AddHeaderOption ("$SkyOutEquSys_MCMHeader_OutfitEditor{" + _sEditingOutfit + "}")
+            AddTextOptionST ("OutfitEditor_Back",           "$SkyOutEquSys_OEdit_Back", "")
+            AddMenuOptionST ("OutfitEditor_AddFromCarried", "$SkyOutEquSys_OEdit_AddFromCarried", "")
+            AddMenuOptionST ("OutfitEditor_AddFromWorn",    "$SkyOutEquSys_OEdit_AddFromWorn", "")
+            AddInputOptionST("OutfitEditor_AddByID",        "$SkyOutEquSys_OEdit_AddByID", "")
             ; AddEmptyOption()
-            AddHeaderOption  ("$SkyOutSys_OEdit_AddFromList_Header")
-            AddMenuOptionST  ("OutfitEditor_AddFromList_Menu",     "$SkyOutSys_OEdit_AddFromList_Search", "")
-            AddInputOptionST ("OutfitEditor_AddFromList_Filter",   "$SkyOutSys_OEdit_AddFromList_Filter_Name", _sOutfitEditor_AddFromList_Filter)
-            AddToggleOptionST("OutfitEditor_AddFromList_Playable", "$SkyOutSys_OEdit_AddFromList_Filter_Playable", _bOutfitEditor_AddFromList_Playable)
+            AddHeaderOption  ("$SkyOutEquSys_OEdit_AddFromList_Header")
+            AddMenuOptionST  ("OutfitEditor_AddFromList_Menu",     "$SkyOutEquSys_OEdit_AddFromList_Search", "")
+            AddInputOptionST ("OutfitEditor_AddFromList_Filter",   "$SkyOutEquSys_OEdit_AddFromList_Filter_Name", _sOutfitEditor_AddFromList_Filter)
+            AddToggleOptionST("OutfitEditor_AddFromList_Playable", "$SkyOutEquSys_OEdit_AddFromList_Filter_Playable", _bOutfitEditor_AddFromList_Playable)
 
             If !_sOutfitShowingSlotEditor
                ShowOutfitSlots()
@@ -1141,7 +1141,7 @@ EndFunction
       Function ShowOutfitSlots()
          ;/Block/; ; Right column
          SetCursorPosition(1)
-         AddHeaderOption("$SkyOutSys_MCMHeader_OutfitSlots")
+         AddHeaderOption("$SkyOutEquSys_MCMHeader_OutfitSlots")
          ;
          ; The goal here:
          ;
@@ -1188,7 +1188,7 @@ EndFunction
                String sSlot  = _sOutfitSlotNames [iIterator + iOffset]
                String sArmor = _sOutfitSlotArmors[iIterator + iOffset]
                If !sArmor
-                  sArmor = "$SkyOutSys_NamelessArmor"
+                  sArmor = "$SkyOutEquSys_NamelessArmor"
                EndIf
                AddTextOptionST("OutfitEditor_BodySlot_" + iIterator, sSlot, sArmor)
                iIterator = iIterator + 1
@@ -1203,21 +1203,21 @@ EndFunction
             EndIf
             SetCursorPosition(19)
             AddHeaderOption("")
-            AddTextOptionST("OutfitEditor_BodySlotsPrev", "$SkyOutSys_MCMText_OutfitSlotsPageNumber{" + (_iOutfitEditorBodySlotPage + 1) + "}{" + iPageCount + "}", "$SkyOutSys_MCMText_OutfitSlotsButtonPagePrev", iFlagsPrev)
-            AddTextOptionST("OutfitEditor_BodySlotsNext", "", "$SkyOutSys_MCMText_OutfitSlotsButtonPageNext", iFlagsNext)
+            AddTextOptionST("OutfitEditor_BodySlotsPrev", "$SkyOutEquSys_MCMText_OutfitSlotsPageNumber{" + (_iOutfitEditorBodySlotPage + 1) + "}{" + iPageCount + "}", "$SkyOutEquSys_MCMText_OutfitSlotsButtonPagePrev", iFlagsPrev)
+            AddTextOptionST("OutfitEditor_BodySlotsNext", "", "$SkyOutEquSys_MCMText_OutfitSlotsButtonPageNext", iFlagsNext)
          ElseIf iSlotCount
             Int iIterator = 0
             While iIterator < iSlotCount
                String sSlot  = _sOutfitSlotNames[iIterator]
                String sArmor = _sOutfitSlotArmors[iIterator]
                If !sArmor
-                  sArmor = "$SkyOutSys_NamelessArmor"
+                  sArmor = "$SkyOutEquSys_NamelessArmor"
                EndIf
                AddTextOptionST("OutfitEditor_BodySlot_" + iIterator, sSlot, sArmor)
                iIterator = iIterator + 1
             EndWhile
          Else
-            AddTextOption("$SkyOutSys_OutfitEditor_OutfitIsEmpty", "")
+            AddTextOption("$SkyOutEquSys_OutfitEditor_OutfitIsEmpty", "")
          EndIf
       ;/EndBlock/;
       EndFunction
@@ -1225,15 +1225,15 @@ EndFunction
          If !kAdd || !_sEditingOutfit
             Return
          EndIf
-         If SkyrimOutfitSystemNativeFuncs.ArmorConflictsWithOutfit(kAdd, _sEditingOutfit)
-            Bool bSwap = ShowMessage("$SkyOutSys_Confirm_BodySlotConflict_Text", True, "$SkyOutSys_Confirm_BodySlotConflict_Yes", "$SkyOutSys_Confirm_BodySlotConflict_No")
+         If SkyrimOutfitEquipmentSystemNativeFuncs.ArmorConflictsWithOutfit(kAdd, _sEditingOutfit)
+            Bool bSwap = ShowMessage("$SkyOutEquSys_Confirm_BodySlotConflict_Text", True, "$SkyOutEquSys_Confirm_BodySlotConflict_Yes", "$SkyOutEquSys_Confirm_BodySlotConflict_No")
             If bSwap
-               SkyrimOutfitSystemNativeFuncs.RemoveConflictingArmorsFrom(kAdd, _sEditingOutfit)
+               SkyrimOutfitEquipmentSystemNativeFuncs.RemoveConflictingArmorsFrom(kAdd, _sEditingOutfit)
             Else
                Return
             EndIf
          EndIf
-         SkyrimOutfitSystemNativeFuncs.AddArmorToOutfit(_sEditingOutfit, kAdd)
+         SkyrimOutfitEquipmentSystemNativeFuncs.AddArmorToOutfit(_sEditingOutfit, kAdd)
          SetupSlotDataForOutfit(_sEditingOutfit)
          ForcePageReset()
       EndFunction
@@ -1257,12 +1257,12 @@ EndFunction
             ForcePageReset()
          EndEvent
          Event OnHighlightST()
-            SetInfoText("$SkyOutSys_MCMInfoText_BackToOutfitList")
+            SetInfoText("$SkyOutEquSys_MCMInfoText_BackToOutfitList")
          EndEvent
       EndState
       State OutfitEditor_AddFromCarried
          Event OnMenuOpenST()
-            _kOutfitEditor_AddCandidates = SkyrimOutfitSystemNativeFuncs.GetCarriedArmor(Game.GetPlayer())
+            _kOutfitEditor_AddCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.GetCarriedArmor(Game.GetPlayer())
             Int iCount = _kOutfitEditor_AddCandidates.Length
             _sOutfitEditor_AddCandidates = Utility.CreateStringArray(iCount)
             Int iIterator = 0
@@ -1273,16 +1273,16 @@ EndFunction
                   sCurrent = kCurrent.GetName()
                EndIf
                If !sCurrent
-                  sCurrent = "$SkyOutSys_NamelessArmor"
+                  sCurrent = "$SkyOutEquSys_NamelessArmor"
                EndIf
                _sOutfitEditor_AddCandidates[iIterator] = sCurrent
                iIterator = iIterator + 1
             EndWhile
             ;
-            _kOutfitEditor_AddCandidates = SkyrimOutfitSystemNativeFuncs.NaturalSortPairArmor_ASCII(_sOutfitEditor_AddCandidates, _kOutfitEditor_AddCandidates)
-            _sOutfitEditor_AddCandidates = SkyrimOutfitSystemNativeFuncs.NaturalSort_ASCII(_sOutfitEditor_AddCandidates)
+            _kOutfitEditor_AddCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSortPairArmor_ASCII(_sOutfitEditor_AddCandidates, _kOutfitEditor_AddCandidates)
+            _sOutfitEditor_AddCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSort_ASCII(_sOutfitEditor_AddCandidates)
             ;
-            String[] sMenu = PrependStringToArray(_sOutfitEditor_AddCandidates, "$SkyOutSys_OEdit_AddCancel")
+            String[] sMenu = PrependStringToArray(_sOutfitEditor_AddCandidates, "$SkyOutEquSys_OEdit_AddCancel")
             ;
             SetMenuDialogOptions(sMenu)
             SetMenuDialogStartIndex(0)
@@ -1303,12 +1303,12 @@ EndFunction
             EndIf
          EndEvent
          Event OnHighlightST()
-            SetInfoText("$SkyOutSys_MCMInfoText_AddToOutfitFromCarried")
+            SetInfoText("$SkyOutEquSys_MCMInfoText_AddToOutfitFromCarried")
          EndEvent
       EndState
       State OutfitEditor_AddFromWorn
          Event OnMenuOpenST()
-            _kOutfitEditor_AddCandidates = SkyrimOutfitSystemNativeFuncs.GetWornItems(Game.GetPlayer())
+            _kOutfitEditor_AddCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.GetWornItems(Game.GetPlayer())
             Int iCount = _kOutfitEditor_AddCandidates.Length
             _sOutfitEditor_AddCandidates = Utility.CreateStringArray(iCount)
             Int iIterator = 0
@@ -1319,16 +1319,16 @@ EndFunction
                   sCurrent = kCurrent.GetName()
                EndIf
                If !sCurrent
-                  sCurrent = "$SkyOutSys_NamelessArmor"
+                  sCurrent = "$SkyOutEquSys_NamelessArmor"
                EndIf
                _sOutfitEditor_AddCandidates[iIterator] = sCurrent
                iIterator = iIterator + 1
             EndWhile
             ;
-            _kOutfitEditor_AddCandidates = SkyrimOutfitSystemNativeFuncs.NaturalSortPairArmor_ASCII(_sOutfitEditor_AddCandidates, _kOutfitEditor_AddCandidates)
-            _sOutfitEditor_AddCandidates = SkyrimOutfitSystemNativeFuncs.NaturalSort_ASCII(_sOutfitEditor_AddCandidates)
+            _kOutfitEditor_AddCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSortPairArmor_ASCII(_sOutfitEditor_AddCandidates, _kOutfitEditor_AddCandidates)
+            _sOutfitEditor_AddCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSort_ASCII(_sOutfitEditor_AddCandidates)
             ;
-            String[] sMenu = PrependStringToArray(_sOutfitEditor_AddCandidates, "$SkyOutSys_OEdit_AddCancel")
+            String[] sMenu = PrependStringToArray(_sOutfitEditor_AddCandidates, "$SkyOutEquSys_OEdit_AddCancel")
             ;
             SetMenuDialogOptions(sMenu)
             SetMenuDialogStartIndex(0)
@@ -1349,7 +1349,7 @@ EndFunction
             EndIf
          EndEvent
          Event OnHighlightST()
-            SetInfoText("$SkyOutSys_MCMInfoText_AddToOutfitFromWorn")
+            SetInfoText("$SkyOutEquSys_MCMInfoText_AddToOutfitFromWorn")
          EndEvent
       EndState
       State OutfitEditor_AddByID
@@ -1360,7 +1360,7 @@ EndFunction
             If !asTextEntry
                Return
             EndIf
-            Int iFormID = SkyrimOutfitSystemNativeFuncs.HexToInt32(asTextEntry)
+            Int iFormID = SkyrimOutfitEquipmentSystemNativeFuncs.HexToInt32(asTextEntry)
             If !iFormID
                Return
             EndIf
@@ -1368,41 +1368,41 @@ EndFunction
             Armor kArmor = Game.GetForm(iFormID) as Armor
             If !kArmor
                If !kForm
-                  ShowMessage("$SkyOutSys_Err_FormDoesNotExist", False, "$SkyOutSys_ErrDismiss")
+                  ShowMessage("$SkyOutEquSys_Err_FormDoesNotExist", False, "$SkyOutEquSys_ErrDismiss")
                   Return
                EndIf
-               ShowMessage("$SkyOutSys_Err_FormIsNotArmor", False, "$SkyOutSys_ErrDismiss")
+               ShowMessage("$SkyOutEquSys_Err_FormIsNotArmor", False, "$SkyOutEquSys_ErrDismiss")
                Return
             EndIf
             String sName = kArmor.GetName()
             If !sName
-               sName = "$SkyOutSys_NamelessArmor"
+               sName = "$SkyOutEquSys_NamelessArmor"
             EndIf
-            Bool bConfirm = ShowMessage("$SkyOutSys_Confirm_AddByID_Text{" + sName + "}", True, "$SkyOutSys_Confirm_AddByID_Yes", "$SkyOutSys_Confirm_AddByID_No")
+            Bool bConfirm = ShowMessage("$SkyOutEquSys_Confirm_AddByID_Text{" + sName + "}", True, "$SkyOutEquSys_Confirm_AddByID_Yes", "$SkyOutEquSys_Confirm_AddByID_No")
             If bConfirm
                AddArmorToOutfit(kArmor)
             EndIf
          EndEvent
          Event OnHighlightST()
-            SetInfoText("$SkyOutSys_MCMInfoText_AddToOutfitByID")
+            SetInfoText("$SkyOutEquSys_MCMInfoText_AddToOutfitByID")
          EndEvent
       EndState
       ;
       ;/Block/; ; Add-from-list
          Function UpdateArmorSearch()
-            SkyrimOutfitSystemNativeFuncs.PrepArmorSearch(_sOutfitEditor_AddFromList_Filter, _bOutfitEditor_AddFromList_Playable)
-            _sOutfitEditor_AddFromListCandidates = SkyrimOutfitSystemNativeFuncs.GetArmorSearchResultNames()
-            _kOutfitEditor_AddFromListCandidates = SkyrimOutfitSystemNativeFuncs.GetArmorSearchResultForms()
-            SkyrimOutfitSystemNativeFuncs.ClearArmorSearch()
+            SkyrimOutfitEquipmentSystemNativeFuncs.PrepArmorSearch(_sOutfitEditor_AddFromList_Filter, _bOutfitEditor_AddFromList_Playable)
+            _sOutfitEditor_AddFromListCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.GetArmorSearchResultNames()
+            _kOutfitEditor_AddFromListCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.GetArmorSearchResultForms()
+            SkyrimOutfitEquipmentSystemNativeFuncs.ClearArmorSearch()
             ;
-            _kOutfitEditor_AddFromListCandidates = SkyrimOutfitSystemNativeFuncs.NaturalSortPairArmor_ASCII(_sOutfitEditor_AddFromListCandidates, _kOutfitEditor_AddFromListCandidates)
-            _sOutfitEditor_AddFromListCandidates = SkyrimOutfitSystemNativeFuncs.NaturalSort_ASCII(_sOutfitEditor_AddFromListCandidates)
+            _kOutfitEditor_AddFromListCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSortPairArmor_ASCII(_sOutfitEditor_AddFromListCandidates, _kOutfitEditor_AddFromListCandidates)
+            _sOutfitEditor_AddFromListCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSort_ASCII(_sOutfitEditor_AddFromListCandidates)
          EndFunction
          ;
          State OutfitEditor_AddFromList_Menu
             Event OnMenuOpenST()
                UpdateArmorSearch()
-               String[] sMenu = PrependStringToArray(_sOutfitEditor_AddFromListCandidates, "$SkyOutSys_OEdit_AddCancel")
+               String[] sMenu = PrependStringToArray(_sOutfitEditor_AddFromListCandidates, "$SkyOutEquSys_OEdit_AddCancel")
                ;
                SetMenuDialogOptions(sMenu)
                SetMenuDialogStartIndex(0)

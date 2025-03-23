@@ -1313,7 +1313,7 @@ namespace OutfitSystem {
     }
     bool ExportSettings(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
         LogExit exitPrint("ExportSettings"sv);
-        std::string outputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitSystemEquipmentNGData.json";
+        std::string outputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitEquipmentSystemNGData.json";
         auto& service = ArmorAddonOverrideService::GetInstance();
         proto::OutfitSystem data = service.save();
         std::string output;
@@ -1338,7 +1338,7 @@ namespace OutfitSystem {
     }
     bool ImportSettings(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
         LogExit exitPrint("ImportSettings"sv);
-        std::string inputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitSystemEquipmentNGData.json";
+        std::string inputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitEquipmentSystemNGData.json";
         std::ifstream file(inputFile);
         if (!file) {
             RE::DebugNotification("Failed to open config for reading", nullptr, false);
@@ -1366,234 +1366,234 @@ namespace OutfitSystem {
 
 bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
     registry->RegisterFunction("GetOutfitNameMaxLength",
-                               "SkyrimOutfitSystemNativeFuncs",
+                               "SkyrimOutfitEquipmentSystemNativeFuncs",
                                GetOutfitNameMaxLength);
     registry->RegisterFunction(
         "GetOutfitNameMaxLength",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetOutfitNameMaxLength,
         true);
     registry->RegisterFunction(
         "GetCarriedArmor",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetCarriedArmor);
     registry->RegisterFunction(
         "GetWornItems",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetWornItems);
     registry->RegisterFunction(
         "RefreshArmorFor",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         RefreshArmorFor);
     registry->RegisterFunction(
         "RefreshArmorForAllConfiguredActors",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         RefreshArmorForAllConfiguredActors);
     registry->RegisterFunction(
         "ActorNearPC",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         ActorsNearPC);
     //
     {// armor form search utils
         registry->RegisterFunction(
             "PrepArmorSearch",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             ArmorFormSearchUtils::Prep);
         registry->RegisterFunction(
             "GetArmorSearchResultForms",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             ArmorFormSearchUtils::GetForms);
         registry->RegisterFunction(
             "GetArmorSearchResultNames",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             ArmorFormSearchUtils::GetNames);
         registry->RegisterFunction(
             "ClearArmorSearch",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             ArmorFormSearchUtils::Clear);
     }
     {// body slot data
         registry->RegisterFunction(
             "PrepOutfitBodySlotListing",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             BodySlotListing::Prep);
         registry->RegisterFunction(
             "GetOutfitBodySlotListingArmorForms",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             BodySlotListing::GetArmorForms);
         registry->RegisterFunction(
             "GetOutfitBodySlotListingArmorNames",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             BodySlotListing::GetArmorNames);
         registry->RegisterFunction(
             "GetOutfitBodySlotListingSlotIndices",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             BodySlotListing::GetSlotIndices);
         registry->RegisterFunction(
             "ClearOutfitBodySlotListing",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             BodySlotListing::Clear);
     }
     {// string sorts
         registry->RegisterFunction(
             "NaturalSort_ASCII",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             StringSorts::NaturalSort_ASCII,
             true);
         registry->RegisterFunction(
             "NaturalSortPairArmor_ASCII",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             StringSorts::NaturalSortPair_ASCII<RE::TESObjectARMO>,
             true);
     }
     {// Utility
         registry->RegisterFunction(
             "HexToInt32",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             Utility::HexToInt32,
             true);
         registry->RegisterFunction(
             "ToHex",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             Utility::ToHex,
             true);
     }
     //
     registry->RegisterFunction(
         "AddArmorToOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         AddArmorToOutfit);
     registry->RegisterFunction(
         "ArmorConflictsWithOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         ArmorConflictsWithOutfit);
     registry->RegisterFunction(
         "CreateOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         CreateOutfit);
     registry->RegisterFunction(
         "DeleteOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         DeleteOutfit);
     registry->RegisterFunction(
         "GetOutfitContents",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetOutfitContents);
     registry->RegisterFunction(
         "GetOutfitFavoriteStatus",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetOutfitFavoriteStatus);
     registry->RegisterFunction(
         "SetOutfitFavoriteStatus",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         SetOutfitFavoriteStatus);
     registry->RegisterFunction(
         "IsEnabled",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         IsEnabled);
     registry->RegisterFunction(
         "GetSelectedOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetSelectedOutfit);
     registry->RegisterFunction(
         "ListOutfits",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         ListOutfits);
     registry->RegisterFunction(
         "RemoveArmorFromOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         RemoveArmorFromOutfit);
     registry->RegisterFunction(
         "RemoveConflictingArmorsFrom",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         RemoveConflictingArmorsFrom);
     registry->RegisterFunction(
         "RenameOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         RenameOutfit);
     registry->RegisterFunction(
         "OutfitExists",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         OutfitExists);
     registry->RegisterFunction(
         "OverwriteOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         OverwriteOutfit);
     registry->RegisterFunction(
         "SetEnabled",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         SetEnabled);
     registry->RegisterFunction(
         "SetSelectedOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         SetSelectedOutfit);
     registry->RegisterFunction(
         "AddActor",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         AddActor);
     registry->RegisterFunction(
         "RemoveActor",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         RemoveActor);
     registry->RegisterFunction(
         "ListActors",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         ListActors);
     registry->RegisterFunction(
         "GetAutoSwitchGenericLocationArray",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetAutoSwitchGenericLocationArray);
     registry->RegisterFunction(
         "GetAutoSwitchSpecificLocationArray",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetAutoSwitchSpecificLocationArray);
     registry->RegisterFunction(
         "GetAutoSwitchActionBasedLocationArray",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetAutoSwitchActionBasedLocationArray);
     registry->RegisterFunction(
         "IdentifyLocationType",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         IdentifyLocationType);
     registry->RegisterFunction(
         "SetOutfitsUsingLocation",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         SetOutfitsUsingLocation);
     registry->RegisterFunction(
         "SetLocationOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         SetLocationOutfit);
     registry->RegisterFunction(
         "UnsetLocationOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         UnsetLocationOutfit);
     registry->RegisterFunction(
         "GetLocationOutfit",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetLocationOutfit);
     registry->RegisterFunction(
         "ExportSettings",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         ExportSettings);
     registry->RegisterFunction(
         "ImportSettings",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         ImportSettings);
     registry->RegisterFunction(
         "GetAllLoadedModsList",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetAllLoadedModsList);
     registry->RegisterFunction(
         "GetAllLoadedOutfitsForMod",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetAllLoadedOutfitsForMod);
     registry->RegisterFunction(
         "AddOutfitFromModToOutfitList",
-        "SkyrimOutfitSystemNativeFuncs",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
         AddOutfitFromModToOutfitList);
     registry->RegisterFunction(
             "AddAllOutfitsFromModToOutfitList",
-            "SkyrimOutfitSystemNativeFuncs",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
             AddAllOutfitsFromModToOutfitList);
     return true;
 }

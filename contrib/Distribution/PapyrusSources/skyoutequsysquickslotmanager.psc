@@ -1,7 +1,7 @@
-Scriptname SkyOutSysQuickslotManager extends Quest Hidden
+Scriptname SkyOutEquSysQuickslotManager extends Quest Hidden
 
 Bool     Property pbEnabled = False Auto Hidden
-Spell  Property SkyrimOutfitSystemQuickslotSpell Auto ; auto-fill
+Spell  Property SkyrimOutfitEquipmentSystemQuickslotSpell Auto ; auto-fill
 
 ;
 ; We offer the user a spell that can be cast in order to show a pop-up 
@@ -38,8 +38,8 @@ EndFunction
 Function SetEnabled(Bool abState)
    pbEnabled = abState
    If abState
-      Game.GetPlayer().AddSpell(SkyrimOutfitSystemQuickslotSpell, False)
+      Game.GetPlayer().AddSpell(SkyrimOutfitEquipmentSystemQuickslotSpell, False)
    Else
-      Game.GetPlayer().RemoveSpell(SkyrimOutfitSystemQuickslotSpell)
+      Game.GetPlayer().RemoveSpell(SkyrimOutfitEquipmentSystemQuickslotSpell)
    EndIf
 EndFunction

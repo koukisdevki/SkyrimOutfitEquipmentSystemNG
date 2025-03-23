@@ -1,5 +1,5 @@
-#ifndef SKYRIMOUTFITSYSTEMNG_SOS_PCH_H
-#define SKYRIMOUTFITSYSTEMNG_SOS_PCH_H
+#ifndef SKYRIMOUTFITEQUIPMENTSYSTEMNG_SOS_PCH_H
+#define SKYRIMOUTFITEQUIPMENTSYSTEMNG_SOS_PCH_H
 
 #include "version.h"
 
@@ -32,9 +32,9 @@ namespace util {
 namespace Plugin {
     using namespace std::literals;
 
-    inline constexpr REL::Version VERSION{SKYRIMOUTFITSYSTEMNG_VERSION_MAJOR, SKYRIMOUTFITSYSTEMNG_VERSION_MINOR,
-                                          SKYRIMOUTFITSYSTEMNG_VERSION_PATCH};
-    inline constexpr auto NAME = "SkyrimOutfitSystemNG"sv;
+    inline constexpr REL::Version VERSION{SKYRIMOUTFITEQUIPMENTSYSTEMNG_VERSION_MAJOR, SKYRIMOUTFITEQUIPMENTSYSTEMNG_VERSION_MINOR,
+                                          SKYRIMOUTFITEQUIPMENTSYSTEMNG_VERSION_PATCH};
+    inline constexpr auto NAME = "SkyrimOutfitEquipmentSystemNG"sv;
 }  // namespace Plugin
 
-#endif  // SKYRIMOUTFITSYSTEMNG_SOS_PCH_H
+#endif  // SKYRIMOUTFITEQUIPMENTSYSTEMNG_SOS_PCH_H

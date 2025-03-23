@@ -1,4 +1,4 @@
-Scriptname SkyrimOutfitSystemNativeFuncs Hidden
+Scriptname SkyrimOutfitEquipmentSystemNativeFuncs Hidden
 
 ;
 ; Information on the outfit system:

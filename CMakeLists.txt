@@ -5,7 +5,7 @@ message("Using toolchain file ${CMAKE_TOOLCHAIN_FILE}.")
 ## Define project
 ########################################################################################################################
 project(
-        SkyrimOutfitSystemNG
+        SkyrimOutfitEquipmentSystemNG
         VERSION 1.0.0
         DESCRIPTION "Skyrim Outfit System for all version (SE/AE/VR)."
         LANGUAGES CXX)
