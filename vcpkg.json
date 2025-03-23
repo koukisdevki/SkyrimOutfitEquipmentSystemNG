@@ -3,7 +3,7 @@
   "name": "skyrim-outfit-system-ng",
   "version-string": "1.0.0",
   "port-version": 0,
-  "description": "Skyrim Outfit System for all version (SE/AE/VR).",
+  "description": "Skyrim Outfit Equipment System for all version (SE/AE/VR).",
   "homepage": "https://www.skyrimng.com",
   "license": "Apache-2.0",
   "features": {

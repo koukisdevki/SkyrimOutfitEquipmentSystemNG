@@ -54,7 +54,7 @@ public:
     void RestartMonitoring();
     void CheckForChanges();
     void UpdateOutfits(const std::string& reason);
-    void Reset();
+    void StateReset();
 
 private:
     AutoOutfitSwitchService() = default;

@@ -87,13 +87,13 @@ Event OnConfigOpen()
    ResetOutfitBrowser()
    ResetOutfitEditor()
    RefreshCache()
-   ShowMessage("Max page outfits: " + _OutfitsPageMaxOutfits + " and Max submenu items" + _iSelectMenuMax)
 EndEvent
 Event OnConfigClose()
    SkyrimOutfitEquipmentSystemNativeFuncs.SetOutfitsUsingLocation(Game.GetPlayer().GetCurrentLocation(), Weather.GetCurrentWeather())
    SkyrimOutfitEquipmentSystemNativeFuncs.RefreshArmorForAllConfiguredActors()
    ResetOutfitBrowser()
    ResetOutfitEditor()
+   SkyrimOutfitEquipmentSystemNativeFuncs.AutoOutfitSwitchStateReset()
 EndEvent
 Event OnPageReset(String asPage)
    If asPage == "$SkyOutEquSys_MCM_Options"
@@ -484,10 +484,7 @@ EndFunction
          String[] kActorNames = Utility.CreateStringArray(_kActorSelection_SelectCandidates.Length)
          Int iIterator = 0
          While iIterator < _kActorSelection_SelectCandidates.Length
-            If _kActorSelection_SelectCandidates[iIterator] != Game.GetPlayer()
-               String CurrActorName = _kActorSelection_SelectCandidates[iIterator].GetActorBase().GetName()
-               kActorNames[iIterator] = CurrActorName
-            Endif
+            kActorNames[iIterator] = _kActorSelection_SelectCandidates[iIterator].GetActorBase().GetName()
             iIterator = iIterator + 1
          EndWhile
          String[] sMenu = PrependStringToArray(kActorNames, "$SkyOutEquSys_OEdit_AddCancel")
@@ -497,9 +494,6 @@ EndFunction
       EndEvent
       Event OnMenuAcceptST(Int aiIndex)
          If aiIndex == 0 || aiIndex > _kActorSelection_SelectCandidates.Length
-            return
-         Endif
-         If _kActorSelection_SelectCandidates[aiIndex - 1] == Game.GetPlayer()
             return
          Endif
          SkyrimOutfitEquipmentSystemNativeFuncs.RemoveActor(_kActorSelection_SelectCandidates[aiIndex - 1])

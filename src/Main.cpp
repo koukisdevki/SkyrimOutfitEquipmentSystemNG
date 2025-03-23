@@ -77,17 +77,15 @@ void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
 
         // Modify the service to handle cleanup internally
         auto& autoOutfitservice = AutoOutfitSwitchService::GetSingleton();
-        autoOutfitservice.Reset();
-        autoOutfitservice.RestartMonitoring();
+        autoOutfitservice.Initialize();
     } else if (message->type == SKSE::MessagingInterface::kPreLoadGame) {
         // AAOS::load resets as well, but this is needed in case the save we're about to load doesn't have any AAOS
         // data.
         ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
     }
     else if (message->type == SKSE::MessagingInterface::kPostLoadGame) {
-        auto& service = AutoOutfitSwitchService::GetSingleton();
-        service.Reset();
-        service.RestartMonitoring();
+        auto& autoOutfitservice = AutoOutfitSwitchService::GetSingleton();
+        autoOutfitservice.Initialize();
     }
 }
 

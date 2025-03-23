@@ -696,6 +696,12 @@ namespace OutfitSystem {
                         entry.filePtr = mod;
                         userMods[filename] = entry;
 
+                        std::unordered_map<std::string, RE::BGSOutfit*> outfitMap;
+                        std::string outfitName = REUtilities::get_editorID(outfitForm);
+                        outfitMap[outfitName] = outfitForm;
+
+                        entry.outfitsMap = outfitMap;
+
                         LOG(info, "Regular mod: {}", entry.filename);
                         LOG(info, "Done processing: {}, Load order {}", filename, mod->GetCompileIndex());
                     }
@@ -708,10 +714,7 @@ namespace OutfitSystem {
                             outfitName = fmt::format("Outfit_{:X}", outfitForm->formID & 0xFFF);
                         }
 
-                        std::unordered_map<std::string, RE::BGSOutfit*> outfitMap;
-                        outfitMap[outfitName] = outfitForm;
-
-                        entry.outfitsMap = outfitMap;
+                        entry.outfitsMap[outfitName] = outfitForm;
                     }
                 }
             }
@@ -762,6 +765,7 @@ namespace OutfitSystem {
         RE::StaticFunctionTag*,
         std::string modName
     ) {
+        LOG(info, "Grabbing all outfit records for {}", modName);
         std::vector<std::string> result;
 
         // Ensure mod list is cached
@@ -780,6 +784,8 @@ namespace OutfitSystem {
         for (const auto& outfitName : outfits | views::keys) {
             result.push_back(outfitName);
         }
+
+        LOG(info, "Mapped {} outfits for {}. Returning {} mods.", outfits.size(), modName, result.size());
 
         return result;
     }
@@ -1129,6 +1135,16 @@ namespace OutfitSystem {
         return actorVec;
     }
 
+    bool HasActor(RE::BSScript::IVirtualMachine* registry,
+                                       std::uint32_t stackId,
+                                       RE::StaticFunctionTag*,
+                                       RE::Actor* target) {
+        LogExit exitPrint("ListActors"sv);
+        auto& service = ArmorAddonOverrideService::GetInstance();
+        auto actors = service.listActors();
+        return actors.contains(target);
+    }
+
     std::vector<std::uint32_t> GetAutoSwitchGenericLocationArray(RE::BSScript::IVirtualMachine* registry,
                                                       std::uint32_t stackId,
                                                       RE::StaticFunctionTag*) {
@@ -1311,6 +1327,12 @@ namespace OutfitSystem {
             return RE::BSFixedString("");
         }
     }
+
+    void AutoOutfitSwitchStateReset(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
+        auto& autoSwitchService = AutoOutfitSwitchService::GetSingleton();
+        autoSwitchService.StateReset();
+    }
+
     bool ExportSettings(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
         LogExit exitPrint("ExportSettings"sv);
         std::string outputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitEquipmentSystemNGData.json";
@@ -1540,6 +1562,10 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         ListActors);
     registry->RegisterFunction(
+            "HasActor",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
+            HasActor);
+    registry->RegisterFunction(
         "GetAutoSwitchGenericLocationArray",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetAutoSwitchGenericLocationArray);
@@ -1595,5 +1621,9 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
             "AddAllOutfitsFromModToOutfitList",
             "SkyrimOutfitEquipmentSystemNativeFuncs",
             AddAllOutfitsFromModToOutfitList);
+    registry->RegisterFunction(
+                "AutoOutfitSwitchStateReset",
+                "SkyrimOutfitEquipmentSystemNativeFuncs",
+                AutoOutfitSwitchStateReset);
     return true;
 }

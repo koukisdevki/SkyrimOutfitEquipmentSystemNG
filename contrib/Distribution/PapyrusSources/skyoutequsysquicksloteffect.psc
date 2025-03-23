@@ -1,6 +1,13 @@
 Scriptname SkyOutEquSysQuickslotEffect extends activemagiceffect
 
 Event OnEffectStart(Actor akCaster, Actor akTarget)
+   bool isPCTracked = SkyrimOutfitEquipmentSystemNativeFuncs.HasActor(Game.GetPlayer())
+
+   If(!isPCTracked)
+      Debug.Notification("The player is not being tracked, cannot add outfit.")
+      return
+   EndIF
+
    String[] sLMenuItems = SkyrimOutfitEquipmentSystemNativeFuncs.ListOutfits(favoritesOnly = true)
    sLMenuItems = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSort_ASCII(sLMenuItems)
    UIListMenu menu = UIExtensions.GetMenu("UIListMenu") as UIListMenu

@@ -11,7 +11,6 @@
 #include "OutfitSystem.h"
 
 void AutoOutfitSwitchService::Initialize() {
-    Reset();
     EnableMonitoring(true);
 }
 
@@ -42,6 +41,7 @@ void AutoOutfitSwitchService::RestartMonitoring() {
     SKSE::GetTaskInterface()->AddTask([this]() {
         RE::DebugNotification("Starting skyrim outfit equipment system thread....");
         this->EnableMonitoring(true);
+        StateReset();
     });
 }
 
@@ -75,7 +75,9 @@ void AutoOutfitSwitchService::MonitorThreadFunc() {
     threadRunning = false; // Mark thread as no longer running
 }
 
-void AutoOutfitSwitchService::Reset() {
+void AutoOutfitSwitchService::StateReset() {
+    LOG(info, "Auto Switch State Reset");
+
     // Clear current trackers
     actorStatusTrackers.clear();
 
@@ -131,7 +133,8 @@ void AutoOutfitSwitchService::CheckForChanges() {
             std::string locationName = currentLocation && currentLocation->GetFullName() ?
                 currentLocation->GetFullName() : "Unknown Location";
             UpdateOutfits("Location changed to " + locationName);
-            lastLocation = currentLocation;
+            // since on location changes new actors may have joined, do a full actor reset.
+            StateReset();
             return; // Return to prevent multiple updates in the same check
         }
 
@@ -155,7 +158,12 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
     // Then check individual actor state changes
     for (auto& [actor, tracker] : actorStatusTrackers) {
-        if (!actor || !actor->Is3DLoaded()) continue;
+        if (!actor) continue;
+
+        if (!actor->Is3DLoaded()) {
+            LOG(info, "The actor {} is not 3D loaded.", actor->GetDisplayFullName());
+            continue;
+        }
 
         std::string actorName = actor->GetName();
         if (actorName.empty()) {

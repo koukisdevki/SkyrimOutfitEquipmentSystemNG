@@ -248,8 +248,6 @@ void ArmorAddonOverrideService::addActor(RE::Actor* target) {
 }
 
 void ArmorAddonOverrideService::removeActor(RE::Actor* target) {
-    if (target == RE::PlayerCharacter::GetSingleton())
-        return;
     actorOutfitAssignments.erase(target);
 }
 

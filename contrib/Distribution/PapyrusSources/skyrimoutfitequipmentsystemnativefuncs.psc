@@ -86,6 +86,7 @@ Bool     Function OutfitExists      (String asOutfitName) Global Native
          Function AddActor (Actor akSubject) Global Native
          Function RemoveActor (Actor akSubject) Global Native
 Actor[]  Function ListActors() Global Native
+bool     Function HasActor(Actor target) Global Native
 
 Int[]    Function GetAutoSwitchGenericLocationArray () Global Native
 Int[]    Function GetAutoSwitchSpecificLocationArray () Global Native
@@ -101,5 +102,7 @@ Bool     Function ImportSettings () Global Native
 String[] Function GetAllLoadedModsList () Global Native
 String[] Function GetAllLoadedOutfitsForMod (String modName) Global Native
 
-Int Function AddOutfitFromModToOutfitList(String modName, String formEditorID) Global Native
-Int Function AddAllOutfitsFromModToOutfitList(String modName) Global Native
+Int      Function AddOutfitFromModToOutfitList(String modName, String formEditorID) Global Native
+Int      Function AddAllOutfitsFromModToOutfitList(String modName) Global Native
+
+         Function AutoOutfitSwitchStateReset () Global Native
