@@ -21,6 +21,11 @@ namespace RE {
     class TESObjectARMO;
 }
 
+enum class InventoryManagementMode : std::uint32_t {
+    Automatic = 1,
+    Immersive = 2
+};
+
 enum class LocationType : std::uint32_t {
     // pairs of 100
     // Generic Locations
@@ -100,7 +105,7 @@ public:
     ArmorAddonOverrideService(){};
     ArmorAddonOverrideService(const proto::OutfitSystem& data, const SKSE::SerializationInterface* intfc);// can throw load_error
     typedef Outfit Outfit;
-    static constexpr std::uint32_t signature = 'AAOS';
+    static constexpr std::uint32_t signature = 'VZ4S';
     enum {
         kSaveVersionV1 = 1,
     };
@@ -138,6 +143,8 @@ public:
         std::map<LocationType, cobb::istring> locationOutfits;
     };
     bool enabled = true;
+    InventoryManagementMode playerInventoryManagementMode = InventoryManagementMode::Automatic;
+    InventoryManagementMode npcInventoryManagementMode = InventoryManagementMode::Automatic;
     std::map<cobb::istring, Outfit> outfits;
     std::map<RE::Actor*, ActorOutfitAssignments> actorOutfitAssignments;
 
@@ -171,6 +178,11 @@ public:
     bool shouldOverride(RE::Actor* target) const noexcept;
     void getOutfitNames(std::vector<std::string>& out, bool favoritesOnly = false) const;
     void setEnabled(bool) noexcept;
+
+    InventoryManagementMode getPlayerInventoryManagementMode() const noexcept;
+    void setPlayerInventoryManagementMode(InventoryManagementMode mode) noexcept;
+    InventoryManagementMode getNPCInventoryManagementMode() const noexcept;
+    void setNPCInventoryManagementMode(InventoryManagementMode mode) noexcept;
     //
     proto::OutfitSystem save();// can throw save_error
     //

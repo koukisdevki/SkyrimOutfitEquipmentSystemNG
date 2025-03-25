@@ -88,6 +88,11 @@ Bool     Function OutfitExists      (String asOutfitName) Global Native
 Actor[]  Function ListActors() Global Native
 bool     Function HasActor(Actor target) Global Native
 
+Int      Function GetPlayerInventoryManagementMode () Global Native
+         Function SetPlayerInventoryManagementMode (Int mode) Global Native
+Int      Function GetNPCInventoryManagementMode () Global Native
+         Function SetNPCInventoryManagementMode (Int mode) Global Native
+
 Int[]    Function GetAutoSwitchGenericLocationArray () Global Native
 Int[]    Function GetAutoSwitchSpecificLocationArray () Global Native
 Int[]    Function GetAutoSwitchActionBasedLocationArray () Global Native

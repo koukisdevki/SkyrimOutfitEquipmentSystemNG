@@ -58,7 +58,7 @@ namespace {
     }
 }
 
-std::uint32_t g_pluginSerializationSignature = 'cOft';
+std::uint32_t g_pluginSerializationSignature = 'cOzt';
 
 void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message);
 void Callback_Serialization_Save(SKSE::SerializationInterface* intfc);

@@ -74,6 +74,8 @@ ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& 
 
         // Extract data from the protobuf struct.
         enabled = data.enabled();
+        playerInventoryManagementMode = static_cast<InventoryManagementMode>(data.player_inventory_management_mode());
+        npcInventoryManagementMode = static_cast<InventoryManagementMode>(data.npc_inventory_management_mode());
         std::map<RE::Actor*, ActorOutfitAssignments> actorOutfitAssignmentsLocal;
         auto pc = RE::PlayerCharacter::GetSingleton();
 
@@ -382,9 +384,27 @@ void ArmorAddonOverrideService::setEnabled(bool flag) noexcept {
     enabled = flag;
 }
 
+InventoryManagementMode ArmorAddonOverrideService::getPlayerInventoryManagementMode() const noexcept {
+    return playerInventoryManagementMode;
+}
+
+void ArmorAddonOverrideService::setPlayerInventoryManagementMode(InventoryManagementMode mode) noexcept {
+    playerInventoryManagementMode = mode;
+}
+
+InventoryManagementMode ArmorAddonOverrideService::getNPCInventoryManagementMode() const noexcept {
+    return npcInventoryManagementMode;
+}
+
+void ArmorAddonOverrideService::setNPCInventoryManagementMode(InventoryManagementMode mode) noexcept {
+    npcInventoryManagementMode = mode;
+}
+
 proto::OutfitSystem ArmorAddonOverrideService::save() {
     proto::OutfitSystem out;
     out.set_enabled(enabled);
+    out.set_player_inventory_management_mode(static_cast<uint32_t>(playerInventoryManagementMode));
+    out.set_npc_inventory_management_mode(static_cast<uint32_t>(npcInventoryManagementMode));
     for (const auto& actorAssn : actorOutfitAssignments) {
         // Store a reference to the actor
         RE::Actor* actor = actorAssn.first;

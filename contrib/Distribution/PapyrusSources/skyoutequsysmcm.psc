@@ -47,6 +47,8 @@ Int _iOutfitForModImporter_PageStartIndex ; init option
 String[] _sOutfitImporter_AddOutfitsForModCandidates
 Int _iOutfitForModImporter_HeaderOptionCount ; init option
 
+Int _PlayerInventoryManagementMode; init option
+Int _NPCInventoryManagementMode; init option
 
 Function AddLocationOptions(Int[] aiIndices, String sHeaderKey)
    AddHeaderOption(sHeaderKey)
@@ -73,6 +75,15 @@ EndFunction
 
 SkyOutEquSysQuickslotManager Function GetQuickslotManager() Global
    Return Quest.GetQuest("SkyrimOutfitEquipmentSystemQuickslotManager") as SkyOutEquSysQuickslotManager
+EndFunction
+
+String Function InventoryModeToTrString(int inventoryMode)
+   If inventoryMode == 1
+      return "$SkyOutEquSys_InventoryManagementMode_Automatic"
+   ElseIf inventoryMode == 2
+      return "$SkyOutEquSys_InventoryManagementMode_Immersive"
+   EndIf
+	Return ""
 EndFunction
 
 Event OnGameReload()
@@ -124,6 +135,10 @@ Function InitializeOptions()
    _OutfitImportOutfitsForModPage = 1 ; init option
    _iOutfitForModImporter_PageStartIndex = 0 ; init option
    _iOutfitForModImporter_HeaderOptionCount = 0 ; init option
+
+   ; init options
+   _PlayerInventoryManagementMode = SkyrimOutfitEquipmentSystemNativeFuncs.GetPlayerInventoryManagementMode(); init option
+   _NPCInventoryManagementMode = SkyrimOutfitEquipmentSystemNativeFuncs.GetNPCInventoryManagementMode(); init option
 EndFunction
 
 Function FullRefresh()
@@ -422,6 +437,13 @@ EndFunction
          AddToggleOptionST("OPT_QuickslotsEnabled", "$SkyOutEquSys_Text_EnableQuickslots", kQM.GetEnabled())
          AddEmptyOption()
          ;
+         ; Inventory Management:
+         ;
+         AddHeaderOption("$SkyOutEquSys_MCMHeader_InventoryManagement")
+         AddMenuOptionST("OPT_PlayerInventoryManagementMode", "$SkyOutEquSys_Text_PlayerInventoryManagementMode", InventoryModeToTrString(_PlayerInventoryManagementMode))
+         AddMenuOptionST("OPT_NPCInventoryManagementMode", "$SkyOutEquSys_Text_NPCInventoryManagementMode", InventoryModeToTrString(_NPCInventoryManagementMode))
+         AddEmptyOption()
+         ;
          ; Active actor selection
          ;
          AddHeaderOption("$SkyOutEquSys_Text_ActiveActorHeader")
@@ -541,6 +563,57 @@ EndFunction
       EndEvent
       Event OnHighlightST()
          SetInfoText("$SkyOutEquSys_Desc_EnableQuickslots")
+      EndEvent
+   EndState
+   State OPT_PlayerInventoryManagementMode
+      Event OnMenuOpenST()
+         String[] sMenu = new String[3]
+         sMenu[0] = "$SkyOutEquSys_OEdit_AddCancel"
+         sMenu[1] = InventoryModeToTrString(1)
+         sMenu[2] = InventoryModeToTrString(2)
+
+         SetMenuDialogOptions(sMenu)
+         SetMenuDialogStartIndex(_PlayerInventoryManagementMode)
+         SetMenuDialogDefaultIndex(_PlayerInventoryManagementMode)
+      EndEvent
+      Event OnMenuAcceptST(Int aiIndex)
+         If aiIndex == 0
+            return
+         ElseIf aiIndex <= 2
+            SkyrimOutfitEquipmentSystemNativeFuncs.SetPlayerInventoryManagementMode(aiIndex)
+            _PlayerInventoryManagementMode = aiIndex
+         Endif
+
+         SetMenuOptionValueST(InventoryModeToTrString(_PlayerInventoryManagementMode))
+      EndEvent
+      Event OnHighlightST()
+         SetInfoText("$SkyOutEquSys_Desc_InventoryManagementMode")
+      EndEvent
+   EndState
+
+   State OPT_NPCInventoryManagementMode
+      Event OnMenuOpenST()
+         String[] sMenu = new String[3]
+         sMenu[0] = "$SkyOutEquSys_OEdit_AddCancel"
+         sMenu[1] = InventoryModeToTrString(1)
+         sMenu[2] = InventoryModeToTrString(2)
+
+         SetMenuDialogOptions(sMenu)
+         SetMenuDialogStartIndex(_NPCInventoryManagementMode)
+         SetMenuDialogDefaultIndex(_NPCInventoryManagementMode)
+      EndEvent
+      Event OnMenuAcceptST(Int aiIndex)
+         If aiIndex == 0
+            return
+         ElseIf aiIndex <= 2
+            SkyrimOutfitEquipmentSystemNativeFuncs.SetNPCInventoryManagementMode(aiIndex)
+            _NPCInventoryManagementMode = aiIndex
+         Endif
+
+         SetMenuOptionValueST(InventoryModeToTrString(_NPCInventoryManagementMode))
+      EndEvent
+      Event OnHighlightST()
+         SetInfoText("$SkyOutEquSys_Desc_InventoryManagementMode")
       EndEvent
    EndState
 

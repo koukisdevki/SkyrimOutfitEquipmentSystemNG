@@ -1059,6 +1059,49 @@ namespace OutfitSystem {
         auto& service = ArmorAddonOverrideService::GetInstance();
         service.setEnabled(state);
     }
+
+    std::uint32_t GetPlayerInventoryManagementMode(RE::BSScript::IVirtualMachine* registry,
+                std::uint32_t stackId,
+                RE::StaticFunctionTag*) {
+        LogExit exitPrint("GetPlayerInventoryManagementMode"sv);
+        auto& service = ArmorAddonOverrideService::GetInstance();
+        return static_cast<std::uint32_t>(service.getPlayerInventoryManagementMode());
+    }
+
+    void SetPlayerInventoryManagementMode(RE::BSScript::IVirtualMachine* registry,
+                    std::uint32_t stackId,
+                    RE::StaticFunctionTag*,
+                    std::uint32_t mode) {
+        LogExit exitPrint("SetPlayerInventoryManagementMode"sv);
+        if (mode <= static_cast<std::uint32_t>(InventoryManagementMode::Immersive)) {
+            auto& service = ArmorAddonOverrideService::GetInstance();
+            service.setPlayerInventoryManagementMode(static_cast<InventoryManagementMode>(mode));
+        } else {
+            LOG(critical, "Invalid inventory management mode requested: {}. Cannot set Player inventory management as such mode.", mode);
+        }
+    }
+
+    std::uint32_t GetNPCInventoryManagementMode(RE::BSScript::IVirtualMachine* registry,
+                std::uint32_t stackId,
+                RE::StaticFunctionTag*) {
+        LogExit exitPrint("GetPlayerInventoryManagementMode"sv);
+        auto& service = ArmorAddonOverrideService::GetInstance();
+        return static_cast<std::uint32_t>(service.getNPCInventoryManagementMode());
+    }
+
+    void SetNPCInventoryManagementMode(RE::BSScript::IVirtualMachine* registry,
+                    std::uint32_t stackId,
+                    RE::StaticFunctionTag*,
+                    std::uint32_t mode) {
+        LogExit exitPrint("SetNPCInventoryManagementMode"sv);
+        if (mode <= static_cast<std::uint32_t>(InventoryManagementMode::Immersive)) {
+            auto& service = ArmorAddonOverrideService::GetInstance();
+            service.setNPCInventoryManagementMode(static_cast<InventoryManagementMode>(mode));
+        } else {
+            LOG(critical, "Invalid inventory management mode requested: {}. Cannot set NPC inventory management as such mode.", mode);
+        }
+    }
+
     void SetSelectedOutfit(RE::BSScript::IVirtualMachine* registry,
                            std::uint32_t stackId,
                            RE::StaticFunctionTag*,
@@ -1609,5 +1652,21 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
                 "AutoOutfitSwitchStateReset",
                 "SkyrimOutfitEquipmentSystemNativeFuncs",
                 AutoOutfitSwitchStateReset);
+    registry->RegisterFunction(
+            "GetPlayerInventoryManagementMode",
+            "SkyrimOutfitEquipmentSystemNativeFuncs",
+            GetPlayerInventoryManagementMode);
+    registry->RegisterFunction(
+        "SetPlayerInventoryManagementMode",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        SetPlayerInventoryManagementMode);
+    registry->RegisterFunction(
+        "GetNPCInventoryManagementMode",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        GetNPCInventoryManagementMode);
+    registry->RegisterFunction(
+        "SetNPCInventoryManagementMode",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        SetNPCInventoryManagementMode);
     return true;
 }
