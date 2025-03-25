@@ -51,6 +51,16 @@ const std::string& GetRuntimeDirectory() {
     return s_runtimeDirectory;
 }
 
+
+std::string ProtoUtils::readMessageAsJSON(const google::protobuf::Message& data) {
+    google::protobuf::util::JsonPrintOptions options;
+    options.add_whitespace = true;
+    std::string dataAsJson;
+    auto status = google::protobuf::json::MessageToJsonString(data, &dataAsJson, options);
+
+    return dataAsJson;
+}
+
 Settings::Settings() : reader(GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\SkyrimOutfitEquipmentSystemNG.ini") {
     if (reader.ParseError() != 0) {
         // Failed to load INI. We proceed without it.

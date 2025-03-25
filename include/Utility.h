@@ -1,5 +1,7 @@
 #pragma once
 
+#include <google/protobuf/util/json_util.h>
+
 #include <string>
 
 std::string GetRuntimeName();
@@ -12,6 +14,10 @@ public:
     ~Settings();
     INIReader reader;
     static INIReader* Instance();
+};
+
+namespace ProtoUtils {
+    std::string readMessageAsJSON(const google::protobuf::Message& data);
 };
 
 class LogExit {

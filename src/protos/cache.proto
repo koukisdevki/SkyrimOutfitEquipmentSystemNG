@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package proto;
+
+message ActorVirtualInventoryStash {
+  string actor_ref_form_string = 1;
+  repeated string armors_form_strings = 2; // A list of formIDs that will be resolved as pointers to RE::TESObjectARMO
+}
+
+message OutfitSystemCache{
+  repeated ActorVirtualInventoryStash actor_virtual_inventory_stashes = 1;
+}

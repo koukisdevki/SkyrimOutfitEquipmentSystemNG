@@ -1,10 +1,13 @@
 #include <Windows.h>
-#include "OutfitSystem.h"
-#include "AutoOutfitSwitchService.h"
+#include <google/protobuf/json/json.h>
+#include <google/protobuf/util/json_util.h>
 
 #include "ArmorAddonOverrideService.h"
-#include "Utility.h"
+#include "AutoOutfitSwitchService.h"
 #include "Hooking.h"
+#include "OutfitSystem.h"
+#include "OutfitSystemCacheService.h"
+#include "Utility.h"
 
 using namespace RE::BSScript;
 using namespace SKSE;
@@ -78,10 +81,16 @@ void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
         // Modify the service to handle cleanup internally
         auto& autoOutfitservice = AutoOutfitSwitchService::GetSingleton();
         autoOutfitservice.Initialize();
+
+        // 'OSCS' fresh instance
+        OutfitSystemCacheService::GetSingleton() = OutfitSystemCacheService();
     } else if (message->type == SKSE::MessagingInterface::kPreLoadGame) {
         // AAOS::load resets as well, but this is needed in case the save we're about to load doesn't have any AAOS
         // data.
         ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
+
+        // 'OSCS' fresh instance as well
+        OutfitSystemCacheService::GetSingleton() = OutfitSystemCacheService();
     }
     else if (message->type == SKSE::MessagingInterface::kPostLoadGame) {
         auto& autoOutfitservice = AutoOutfitSwitchService::GetSingleton();
@@ -106,8 +115,27 @@ void Callback_Serialization_Save(SKSE::SerializationInterface* intfc) {
             LOG(info, "Save FAILED for ArmorAddonOverrideService.");
             LOG(info, " - Exception string: %s", exception.what());
         }
-    } else
+    }
+    else
         LOG(info, "Save FAILED for ArmorAddonOverrideService. Record didn't open.");
+
+    if (intfc->OpenRecord(OutfitSystemCacheService::signature, OutfitSystemCacheService::kSaveVersionV1)) {
+        try {
+            auto& service = OutfitSystemCacheService::GetSingleton();
+            const auto& data = service.save();
+            const auto& data_ser = data.SerializeAsString();
+            _assertWrite(intfc->WriteRecordData(data_ser.data(), static_cast<std::uint32_t>(data_ser.size())),
+                         "Failed to write proto into SKSE record.");
+
+            LOG(info, "saved outfit system cache {} to save.", ProtoUtils::readMessageAsJSON(data));
+        } catch (const OutfitSystemCacheService::save_error& exception) {
+            LOG(info, "Save FAILED for OutfitSystemCacheService.");
+            LOG(info, " - Exception string: %s", exception.what());
+        }
+    }
+    else
+        LOG(info, "Save FAILED for ArmorAddonOverrideService. Record didn't open.");
+
     //
     LOG(info, "Saving done!");
 }
@@ -141,9 +169,34 @@ void Callback_Serialization_Load(SKSE::SerializationInterface* intfc) {
                         service = ArmorAddonOverrideService(data, intfc);
                         LOG(info, "Succesfully loaded protobuf data for ArmorAddonOverrideService.");
                     } else {
-                        LOG(err, "Legacy format not supported. Try upgrading through v0.4.0 first.");
+                        LOG(err, "Legacy format not supported. Try upgrading first.");
                     }
                 } catch (const ArmorAddonOverrideService::load_error& exception) {
+                    LOG(info, "Load FAILED for ArmorAddonOverrideService.");
+                    LOG(info, " - Exception string: %s", exception.what());
+                }
+                break;
+            case OutfitSystemCacheService::signature:
+                try {
+                    auto& service = OutfitSystemCacheService::GetSingleton();
+                    if (version >= OutfitSystemCacheService::kSaveVersionV1) {
+                        // Read data from protobuf.
+                        std::vector<char> buf;
+                        buf.insert(buf.begin(), length, 0);
+                        _assertRead(intfc->ReadRecordData(buf.data(), length) == length, "Failed to load protobuf.");
+
+                        // Parse data in protobuf.
+                        proto::OutfitSystemCache data;
+                        _assertRead(data.ParseFromArray(buf.data(), static_cast<int>(buf.size())),
+                                    "Failed to parse protobuf.");
+
+                        // Load data from protobuf struct.
+                        service = OutfitSystemCacheService(data);
+                        LOG(info, "Succesfully loaded protobuf data for OutfitSystemCacheService. Data: {}.", ProtoUtils::readMessageAsJSON(data));
+                    } else {
+                        LOG(err, "Legacy format not supported. Try upgrading first.");
+                    }
+                } catch (const OutfitSystemCacheService::load_error& exception) {
                     LOG(info, "Load FAILED for ArmorAddonOverrideService.");
                     LOG(info, " - Exception string: %s", exception.what());
                 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <set>
-#include <unordered_map>
 #include <vector>
 
 #include "Utility.h"
@@ -105,7 +104,7 @@ public:
     ArmorAddonOverrideService(){};
     ArmorAddonOverrideService(const proto::OutfitSystem& data, const SKSE::SerializationInterface* intfc);// can throw load_error
     typedef Outfit Outfit;
-    static constexpr std::uint32_t signature = 'VZ4S';
+    static constexpr std::uint32_t signature = 'AAOS';
     enum {
         kSaveVersionV1 = 1,
     };

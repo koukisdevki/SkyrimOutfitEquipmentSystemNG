@@ -40,6 +40,7 @@ set(headers
         include/OutfitSystem.h
         include/Forms.h
         include/AutoOutfitSwitchService.h
+        include/OutfitSystemCacheService.h
 )
 
 set(sources
@@ -51,6 +52,7 @@ set(sources
         src/Utility.cpp
         src/Forms.cpp
         src/AutoOutfitSwitchService.cpp
+        src/OutfitSystemCacheService.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
 
 source_group(
@@ -80,6 +82,7 @@ message(STATUS "Found protoc at ${Protobuf_PROTOC_EXECUTABLE}")
 protobuf_generate_cpp(
     PROTO_SRC PROTO_HDR
     src/protos/outfit.proto
+    src/protos/cache.proto
 )
 
 add_library(ProtocolBuffers STATIC ${PROTO_SRC} ${PROTO_HDR})

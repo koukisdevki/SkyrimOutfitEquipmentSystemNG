@@ -4,6 +4,7 @@
 
 #include <algorithm>
 
+#include "OutfitSystemCacheService.h"
 #include "Utility.h"
 #include "cobb/strings.h"
 #include "cobb/utf8naturalsort.h"
@@ -91,11 +92,27 @@ namespace OutfitSystem {
             return;
         }
 
+        auto& cacheService = OutfitSystemCacheService::GetSingleton();
         auto& svc = ArmorAddonOverrideService::GetInstance();
         auto& outfit = svc.currentOutfit(target);
 
         // Compute what should be displayed based on outfit settings
         unordered_set<RE::TESObjectARMO*> displayItems = outfit.m_armors;
+
+        // Get the ActorEquipManager for equipment operations
+        auto equipManager = RE::ActorEquipManager::GetSingleton();
+        if (!equipManager) {
+            LOG(critical,"Failed to get ActorEquipManager singleton");
+            return;
+        }
+
+        // Get currently equipped items
+        std::unordered_set<RE::TESObjectARMO*> equippedArmors;
+        std::unordered_set<RE::TESObjectARMO*> outfitArmorsInInventory;
+
+        bool isPlayerCharacter = target == RE::PlayerCharacter::GetSingleton();
+        bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
+        InventoryManagementMode actorManagementMode = isPlayerCharacter ? svc.playerInventoryManagementMode : svc.npcInventoryManagementMode;
 
         // if no outfit, and the target is not the player, then equip default outfit
         if (outfit == g_noOutfit && target != RE::PlayerCharacter::GetSingleton() && !svc.listActors().contains(target)) {
@@ -117,20 +134,6 @@ namespace OutfitSystem {
             }
         }
 
-        // Get the ActorEquipManager for equipment operations
-        auto equipManager = RE::ActorEquipManager::GetSingleton();
-        if (!equipManager) {
-            LOG(critical,"Failed to get ActorEquipManager singleton");
-            return;
-        }
-
-        // Get currently equipped items
-        std::unordered_set<RE::TESObjectARMO*> equippedArmors;
-        std::unordered_set<RE::TESObjectARMO*> outfitArmorsInInventory;
-
-        bool isPlayerCharacter = (target == RE::PlayerCharacter::GetSingleton());
-        bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
-
         //If outfit exists, unequip armors that are not part of the outfit
         if (!displayItems.empty()) {
             auto inv = target->GetInventory();
@@ -143,29 +146,34 @@ namespace OutfitSystem {
                     }
 
                     // if the current armor is part of the outfit, mark it as an inventory item
-                    if (displayItems.count(armor) != 0) outfitArmorsInInventory.insert(armor);
+                    if (displayItems.contains(armor)) outfitArmorsInInventory.insert(armor);
                 }
             }
 
             for (auto equippedArmor : equippedArmors) {
                 // if the currently equipped outfit is not part of the outfit, remove it
-                if (displayItems.count(equippedArmor) == 0) {
+                if (!displayItems.contains(equippedArmor)) {
                     auto* equipSlot = equippedArmor->GetEquipSlot();
                     equipManager->UnequipObject(target, equippedArmor, nullptr, 1, equipSlot, false, forceEquip, false, true);
                 }
             }
-
-            // if the equipped armors equal previous outfit, then remove them.
-            // More options: Must be part of inventory, automatically add to inventory, and if that is enabled automatically remove from inventory.
         }
 
         // Equip items that should be displayed
         for (auto armor : displayItems) {
             // This armor should be equipped if not currently equipped
-            if (equippedArmors.count(armor) == 0) {
-                // if not part of the user's inventory items, add
-                if (outfitArmorsInInventory.count(armor) == 0) {
+            if (!equippedArmors.contains(armor)) {
+                // in immersive mode, only equip it if its part of the actor's inventory
+                if (actorManagementMode == InventoryManagementMode::Immersive && !outfitArmorsInInventory.contains(armor)) continue;
+
+                // if not part of the user's inventory items, and we're in automatic mode then add the items to actor's inventory, and add it as a stashed item.
+                if (!outfitArmorsInInventory.contains(armor) && actorManagementMode == InventoryManagementMode::Automatic) {
                     target->AddObjectToContainer(armor, nullptr, 1, nullptr);
+
+                    if (!cacheService.actorVirtualInventoryStashes.contains(target))
+                        cacheService.actorVirtualInventoryStashes[target] = std::unordered_set<RE::TESObjectARMO*>();
+
+                    cacheService.actorVirtualInventoryStashes[target].insert(armor);
                     LOG(info,"Added {} to {}'s inventory", armor->GetName(), target->GetName());
                 }
 
@@ -175,6 +183,18 @@ namespace OutfitSystem {
                 // Use ActorEquipManager to equip
                 equipManager->EquipObject(target, armor, nullptr, 1, equipSlot, false, forceEquip, false, true);
                 LOG(info,"Equipped {} on {}", armor->GetName(), target->GetName());
+            }
+        }
+
+        // In automatic mode, we remove all the previously added armors from the actor's inventory that are not part of the current outfit
+        if (actorManagementMode == InventoryManagementMode::Automatic) {
+            if (cacheService.actorVirtualInventoryStashes.contains(target)) {
+                for (auto armor: cacheService.actorVirtualInventoryStashes[target]) {
+                    if (!displayItems.contains(armor)) {
+                        target->RemoveItem(armor, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+                        cacheService.actorVirtualInventoryStashes[target].erase(armor);
+                    }
+                }
             }
         }
 
