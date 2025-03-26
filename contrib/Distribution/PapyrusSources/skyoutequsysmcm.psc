@@ -430,11 +430,11 @@ EndFunction
          AddMenuOptionST("OPT_SelectActorSelection", "$SkyOutEquSys_Text_SelectActorSelection", _aCurrentActor.GetBaseObject().GetName())
          AddEmptyOption()
          ;
-         ; Quickslots:
+         ; Active actor selection
          ;
-         SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
-         AddHeaderOption("$SkyOutEquSys_MCMHeader_Quickslots")
-         AddToggleOptionST("OPT_QuickslotsEnabled", "$SkyOutEquSys_Text_EnableQuickslots", kQM.GetEnabled())
+         AddHeaderOption("$SkyOutEquSys_Text_ActiveActorHeader")
+         AddMenuOptionST("OPT_AddActorSelection", "$SkyOutEquSys_Text_AddActorSelection", "")
+         AddMenuOptionST("OPT_RemoveActorSelection", "$SkyOutEquSys_Text_RemoveActorSelection", "")
          AddEmptyOption()
          ;
          ; Inventory Management:
@@ -444,11 +444,11 @@ EndFunction
          AddMenuOptionST("OPT_NPCInventoryManagementMode", "$SkyOutEquSys_Text_NPCInventoryManagementMode", InventoryModeToTrString(_NPCInventoryManagementMode))
          AddEmptyOption()
          ;
-         ; Active actor selection
+         ; Quickslots:
          ;
-         AddHeaderOption("$SkyOutEquSys_Text_ActiveActorHeader")
-         AddMenuOptionST("OPT_AddActorSelection", "$SkyOutEquSys_Text_AddActorSelection", "")
-         AddMenuOptionST("OPT_RemoveActorSelection", "$SkyOutEquSys_Text_RemoveActorSelection", "")
+         SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
+         AddHeaderOption("$SkyOutEquSys_MCMHeader_Quickslots")
+         AddToggleOptionST("OPT_QuickslotsEnabled", "$SkyOutEquSys_Text_EnableQuickslots", kQM.GetEnabled())
          AddEmptyOption()
          ;
          ; Setting import/export

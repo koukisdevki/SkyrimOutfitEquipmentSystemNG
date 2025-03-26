@@ -235,22 +235,66 @@ namespace OutfitSystem {
     }
 
     std::vector<RE::Actor*> ActorsNearPC(RE::BSScript::IVirtualMachine* registry,
-                                         std::uint32_t stackId,
-                                         RE::StaticFunctionTag*) {
-        LogExit exitPrint("RefreshArmorForAllConfiguredActors"sv);
+                                     std::uint32_t stackId,
+                                     RE::StaticFunctionTag*) {
+        LogExit exitPrint("ActorsNearPC"sv);
         std::vector<RE::Actor*> result;
+
+        auto& svc = ArmorAddonOverrideService::GetInstance();
         auto pc = RE::PlayerCharacter::GetSingleton();
-        ERROR_AND_RETURN_EXPR_IF(pc == nullptr, "Could not get PC Singleton.", result, registry, stackId);
+
+        // Get the process lists - this manages all active actors
+        auto processLists = RE::ProcessLists::GetSingleton();
+        ERROR_AND_RETURN_EXPR_IF(processLists == nullptr, "Could not get ProcessLists Singleton.", result, registry, stackId);
+
+        // Track which actors we've already added to avoid duplicates
+        std::unordered_set<RE::Actor*> addedActors;
+
+        // do current cell NPCs
         auto pcCell = pc->GetParentCell();
-        ERROR_AND_RETURN_EXPR_IF(pcCell == nullptr, "Could not get cell of PC.", result, registry, stackId);
-        result.reserve(pcCell->GetRuntimeData().references.size());
-        for (const auto& ref : pcCell->GetRuntimeData().references) {
-            RE::TESObjectREFR* objectRefPtr = ref.get();
-            auto actorCastedPtr = skyrim_cast<RE::Actor*>(objectRefPtr);
-            if (actorCastedPtr)
-                result.push_back(actorCastedPtr);
+
+        auto isValidPlayableActor = [&](RE::Actor* actor) -> bool {
+            return actor && actor != pc && !addedActors.contains(actor) &&
+                   actor->Is3DLoaded() && actor->GetRace() &&
+                   actor->GetRace()->data.flags.all(RE::RACE_DATA::Flag::kPlayable);
+        };
+
+        if (pcCell) {
+            for (const auto& ref : pcCell->GetRuntimeData().references) {
+                RE::TESObjectREFR* objectRefPtr = ref.get();
+                auto actor = skyrim_cast<RE::Actor*>(objectRefPtr);
+                if (isValidPlayableActor(actor)) addedActors.insert(actor);
+            }
         }
-        result.shrink_to_fit();
+
+        // Helper function to process an actor handle array
+        auto processHandles = [&](const RE::BSTArray<RE::ActorHandle>& handles) {
+            for (const auto& handle : handles) {
+                if (auto actor = handle.get().get()) {
+                    // Skip the player character and actors we've already added
+                    if (isValidPlayableActor(actor)) {
+                        addedActors.insert(actor);
+                    }
+                }
+            }
+        };
+
+        // Process all four handle arrays
+        processHandles(processLists->highActorHandles);      // Fully active, closest to player
+        processHandles(processLists->middleHighActorHandles); // Moderately active
+        processHandles(processLists->middleLowActorHandles); // Less active
+        // processHandles(processLists->lowActorHandles);       // not active, but still loaded. Makes process very slow.
+
+        // add pc if they're not tracked
+        if (!svc.actorOutfitAssignments.contains(pc)) result.push_back(pc);
+
+        // results are only those currently not tracked
+        for (auto& addedActor : addedActors) {
+            if (!svc.actorOutfitAssignments.contains(addedActor)) {
+                result.push_back(addedActor);
+            }
+        }
+
         return result;
     }
 

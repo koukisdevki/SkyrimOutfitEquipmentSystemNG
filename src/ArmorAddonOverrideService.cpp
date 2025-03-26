@@ -305,6 +305,7 @@ std::optional<cobb::istring> ArmorAddonOverrideService::getLocationOutfit(Locati
     if (actorOutfitAssignments.at(target).locationOutfits.count(LocationType::TYPE) && (CHECK_CODE)) \
         return std::optional<LocationType>(LocationType::TYPE);
 
+// Priority is as follows: Actions > Specific Locations > Generic Interiors > Weather Events > Generic Locations
 std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const std::unordered_set<std::string>& keywords,
                                                                          const WeatherFlags& weather_flags,
                                                                          const GameDayPart& day_part,
@@ -318,44 +319,50 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
 
     if (cell) {
         inInterior = cell->IsInteriorCell();
+    }
 
+    if (target->Is3DLoaded()) {
         // Action based location
         CHECK_LOCATION(Mounting, target->IsOnMount());
         CHECK_LOCATION(Swimming, target->AsActorState()->IsSwimming());
         CHECK_LOCATION(Sleeping, REUtilities::IsActorSleeping(target));
         CHECK_LOCATION(InWater, target->IsInWater());
         CHECK_LOCATION(Combat, target->IsInCombat());
-    } else return LocationType::World;
+    }
 
     //Specific locations
-    CHECK_LOCATION(PlayerHome, keywords.count("LocTypePlayerHouse"));
-    CHECK_LOCATION(Castle, keywords.count("LocTypeCastle") || keywords.count("LocTypeMilitaryFort"));
-    CHECK_LOCATION(Temple, keywords.count("LocTypeTemple"));
-    CHECK_LOCATION(GuildHall, keywords.count("LocTypeGuild"));
-    CHECK_LOCATION(Jail, keywords.count("LocTypeJail"));
-    CHECK_LOCATION(Farm, keywords.count("LocTypeFarm") || keywords.count("LocTypeLumberMill"));
-    CHECK_LOCATION(Military, keywords.count("LocTypeMilitaryCamp") || keywords.count("LocTypeBarracks"));
-    CHECK_LOCATION(Inn, keywords.count("LocTypeInn"));
-    CHECK_LOCATION(Store, keywords.count("LocTypeStore"));
-    CHECK_LOCATION(Dungeon, keywords.count("LocTypeDungeon"));
+    CHECK_LOCATION(PlayerHome, keywords.contains("LocTypePlayerHouse"));
+    CHECK_LOCATION(Castle, keywords.contains("LocTypeCastle") || keywords.contains("LocTypeMilitaryFort"));
+    CHECK_LOCATION(Temple, keywords.contains("LocTypeTemple"));
+    CHECK_LOCATION(GuildHall, keywords.contains("LocTypeGuild"));
+    CHECK_LOCATION(Jail, keywords.contains("LocTypeJail"));
+    CHECK_LOCATION(Farm, keywords.contains("LocTypeFarm") || keywords.contains("LocTypeLumberMill"));
+    CHECK_LOCATION(Military, keywords.contains("LocTypeMilitaryCamp") || keywords.contains("LocTypeBarracks"));
+    CHECK_LOCATION(Inn, keywords.contains("LocTypeInn"));
+    CHECK_LOCATION(Store, keywords.contains("LocTypeStore"));
+    CHECK_LOCATION(Dungeon, keywords.contains("LocTypeDungeon"));
 
-    // Generic Locations
-    CHECK_LOCATION(CityInterior, keywords.count("LocTypeCity") && inInterior);
-    CHECK_LOCATION(CitySnow, keywords.count("LocTypeCity") && weather_flags.snowy);
-    CHECK_LOCATION(CityRain, keywords.count("LocTypeCity") && weather_flags.rainy);
-    CHECK_LOCATION(CityNight, keywords.count("LocTypeCity") && day_part == GameDayPart::Night);
-    CHECK_LOCATION(City, keywords.count("LocTypeCity"));
-
-    // A city is considered a town, so it will use the town outfit unless a city one is selected.
-    CHECK_LOCATION(TownInterior, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && inInterior);
-    CHECK_LOCATION(TownSnow, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && weather_flags.snowy);
-    CHECK_LOCATION(TownRain, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && weather_flags.rainy);
-    CHECK_LOCATION(TownNight, keywords.count("LocTypeTown") + keywords.count("LocTypeCity") && day_part == GameDayPart::Night);
-    CHECK_LOCATION(Town, keywords.count("LocTypeTown") + keywords.count("LocTypeCity"));
-
+    // Generic interiors take priority over weather events
+    CHECK_LOCATION(CityInterior, keywords.contains("LocTypeCity") && inInterior);
+    CHECK_LOCATION(TownInterior, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && inInterior);
     CHECK_LOCATION(WorldInterior, inInterior);
+
+    // Weather takes priority over regular weather events
+    CHECK_LOCATION(CitySnow, keywords.contains("LocTypeCity") && weather_flags.snowy);
+    CHECK_LOCATION(CityRain, keywords.contains("LocTypeCity") && weather_flags.rainy);
+    CHECK_LOCATION(TownSnow, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && weather_flags.snowy);
+    CHECK_LOCATION(TownRain, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && weather_flags.rainy);
     CHECK_LOCATION(WorldSnow, weather_flags.snowy);
     CHECK_LOCATION(WorldRain, weather_flags.rainy);
+
+    // Generic Locations
+    CHECK_LOCATION(CityNight, keywords.contains("LocTypeCity") && day_part == GameDayPart::Night);
+    CHECK_LOCATION(City, keywords.contains("LocTypeCity"));
+
+    // A city is considered a town, so it will use the town outfit unless a city one is selected.
+    CHECK_LOCATION(TownNight, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && day_part == GameDayPart::Night);
+    CHECK_LOCATION(Town, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity"));
+
     CHECK_LOCATION(WorldNight, day_part == GameDayPart::Night);
     CHECK_LOCATION(World, true);
 
@@ -365,7 +372,7 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
 bool ArmorAddonOverrideService::shouldOverride(RE::Actor* target) const noexcept {
     if (!enabled)
         return false;
-    if (actorOutfitAssignments.count(target) == 0)
+    if (!actorOutfitAssignments.contains(target))
         return false;
     if (actorOutfitAssignments.at(target).currentOutfitName == g_noOutfitName)
         return false;
