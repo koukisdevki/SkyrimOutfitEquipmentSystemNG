@@ -29,6 +29,7 @@ enum class WEAPON_STATE : std::uint32_t
 };
 
 struct ActorActionStatusTracker {
+    bool last3DLoadedStatus = false;
     bool lastInCombatStatus = false;
     bool lastInWaterStatus = false;
     bool lastSleepingStatus = false;

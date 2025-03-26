@@ -89,6 +89,7 @@ void AutoOutfitSwitchService::StateReset() {
     for (auto* actor : actors) {
         if (actor && actor->Is3DLoaded()) {
             ActorActionStatusTracker tracker;
+            tracker.last3DLoadedStatus = true;
             tracker.lastInCombatStatus = actor->IsInCombat();
             tracker.lastInWaterStatus = actor->IsInWater();
             tracker.lastSleepingStatus = REUtilities::IsActorSleeping(actor);
@@ -98,6 +99,7 @@ void AutoOutfitSwitchService::StateReset() {
             actorStatusTrackers[actor] = tracker;
         } else {
             ActorActionStatusTracker tracker;
+            tracker.last3DLoadedStatus = false;
             tracker.lastInCombatStatus = false;
             tracker.lastInWaterStatus = false;
             tracker.lastSleepingStatus = false;
@@ -162,6 +164,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
         if (!actor->Is3DLoaded()) {
             LOG(info, "The actor {} is not 3D loaded.", actor->GetDisplayFullName());
+            tracker.last3DLoadedStatus = false;
             continue;
         }
 
@@ -170,6 +173,14 @@ void AutoOutfitSwitchService::CheckForChanges() {
             actorName = "Unnamed Actor";
         }
         std::string message;
+
+        // 3D load check
+        if (tracker.last3DLoadedStatus == false) {
+            message = actorName + " now 3d loaded";
+            UpdateOutfits(message);
+            tracker.last3DLoadedStatus = true;
+            return;
+        }
 
         // Check combat status
         const bool currentlyInCombat = actor->IsInCombat();
