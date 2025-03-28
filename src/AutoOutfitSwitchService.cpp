@@ -151,7 +151,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
         // Check location changes
         const auto currentLocation = actor->GetCurrentLocation();
-        if (currentLocation != tracker.lastLocation) {
+        if (currentLocation && (tracker.lastLocation == nullptr || currentLocation != tracker.lastLocation)) {
             std::string locationName = currentLocation && currentLocation->GetFullName() ?
                 currentLocation->GetFullName() : "Unknown Location";
             UpdateOutfits("Location changed to " + locationName + " for " + actorName);
@@ -161,7 +161,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
         // Check weather changes
         const auto currentWeather = RE::Sky::GetSingleton()->currentWeather;
-        if (currentWeather != tracker.lastWeather && currentWeather) {
+        if (currentWeather && (tracker.lastWeather == nullptr || currentWeather != tracker.lastWeather)) {
             UpdateOutfits("Weather changed to " + GetWeatherName(currentWeather) + " for " + actorName);
             tracker.lastWeather = currentWeather;
             return; // Return to prevent multiple updates in the same check
