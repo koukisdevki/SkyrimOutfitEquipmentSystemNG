@@ -332,12 +332,12 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
 
     //Specific locations
     CHECK_LOCATION(PlayerHome, keywords.contains("LocTypePlayerHouse") && inInterior);
-    CHECK_LOCATION(Castle, keywords.contains("LocTypeCastle") || keywords.contains("LocTypeMilitaryFort"));
+    CHECK_LOCATION(Castle, keywords.contains("LocTypeCastle"));
     CHECK_LOCATION(Temple, keywords.contains("LocTypeTemple") && inInterior);
     CHECK_LOCATION(GuildHall, keywords.contains("LocTypeGuild") && inInterior);
     CHECK_LOCATION(Jail, keywords.contains("LocTypeJail") && inInterior);
     CHECK_LOCATION(Farm, keywords.contains("LocTypeFarm") || keywords.contains("LocTypeLumberMill"));
-    CHECK_LOCATION(Military, keywords.contains("LocTypeMilitaryCamp") || keywords.contains("LocTypeBarracks"));
+    CHECK_LOCATION(Military, keywords.contains("LocTypeMilitaryCamp") || keywords.contains("LocTypeBarracks") || keywords.contains("LocTypeMilitaryFort"));
     CHECK_LOCATION(Inn, keywords.contains("LocTypeInn") && inInterior);
     CHECK_LOCATION(Store, keywords.contains("LocTypeStore") && inInterior);
     CHECK_LOCATION(Dungeon, keywords.contains("LocTypeDungeon") && inInterior);
