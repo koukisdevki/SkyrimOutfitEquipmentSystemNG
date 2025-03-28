@@ -85,10 +85,16 @@ void AutoOutfitSwitchService::StateReset() {
     auto& overrideService = ArmorAddonOverrideService::GetInstance();
     auto actors = overrideService.listActors();
 
+    // If main character is not part of the check changes, add it since its essential for tracking
+
+
     // Initialize tracker for each actor
     for (auto* actor : actors) {
         if (actor && actor->Is3DLoaded()) {
             ActorActionStatusTracker tracker;
+            tracker.lastGameDayPart = REUtilities::CurrentGameDayPart();
+            tracker.lastWeather = RE::Sky::GetSingleton()->currentWeather;
+            tracker.lastLocation = actor->GetCurrentLocation();
             tracker.last3DLoadedStatus = true;
             tracker.lastInCombatStatus = actor->IsInCombat();
             tracker.lastInWaterStatus = actor->IsInWater();
@@ -99,6 +105,9 @@ void AutoOutfitSwitchService::StateReset() {
             actorStatusTrackers[actor] = tracker;
         } else {
             ActorActionStatusTracker tracker;
+            tracker.lastGameDayPart = std::nullopt;
+            tracker.lastWeather = nullptr;
+            tracker.lastLocation = nullptr;
             tracker.last3DLoadedStatus = false;
             tracker.lastInCombatStatus = false;
             tracker.lastInWaterStatus = false;
@@ -109,53 +118,11 @@ void AutoOutfitSwitchService::StateReset() {
             actorStatusTrackers[actor] = tracker;
         }
     }
-
-    // Track environment info
-    lastGameDayPart = REUtilities::CurrentGameDayPart();
-    lastWeather = RE::Sky::GetSingleton()->currentWeather;
-    auto player = RE::PlayerCharacter::GetSingleton();
-    if (player) {
-        lastLocation = player->GetCurrentLocation();
-    }
 }
 
 void AutoOutfitSwitchService::CheckForChanges() {
     if (!isMonitoring || isUpdating) {  // Don't process if already updating
         return;
-    }
-
-    // First check global environment changes
-    auto player = RE::PlayerCharacter::GetSingleton();
-    if (player) {
-        std::string message;
-
-        // Check location changes
-        const auto currentLocation = player->GetCurrentLocation();
-        if (currentLocation != lastLocation) {
-            std::string locationName = currentLocation && currentLocation->GetFullName() ?
-                currentLocation->GetFullName() : "Unknown Location";
-            UpdateOutfits("Location changed to " + locationName);
-            // since on location changes new actors may have joined, do a full actor reset.
-            StateReset();
-            return; // Return to prevent multiple updates in the same check
-        }
-
-        // Check weather changes
-        const auto currentWeather = RE::Sky::GetSingleton()->currentWeather;
-        if (currentWeather != lastWeather && currentWeather) {
-            UpdateOutfits("Weather changed to " + GetWeatherName(currentWeather));
-            lastWeather = currentWeather;
-            return; // Return to prevent multiple updates in the same check
-        }
-
-        // Check day part time changes
-        const auto currentDayPart = REUtilities::CurrentGameDayPart();
-        if (currentDayPart != lastGameDayPart) {
-            std::string dayPartString = (currentDayPart == GameDayPart::Day) ? "Day" : "Night";
-            UpdateOutfits("Day time changed to " + dayPartString);
-            lastGameDayPart = currentDayPart;
-            return;
-        }
     }
 
     // Then check individual actor state changes
@@ -179,6 +146,34 @@ void AutoOutfitSwitchService::CheckForChanges() {
             message = actorName + " now 3d loaded";
             UpdateOutfits(message);
             tracker.last3DLoadedStatus = true;
+            return;
+        }
+
+        // Check location changes
+        const auto currentLocation = actor->GetCurrentLocation();
+        if (currentLocation != tracker.lastLocation) {
+            std::string locationName = currentLocation && currentLocation->GetFullName() ?
+                currentLocation->GetFullName() : "Unknown Location";
+            UpdateOutfits("Location changed to " + locationName + " for " + actorName);
+            tracker.lastLocation = currentLocation;
+            return; // Return to prevent multiple updates in the same check
+        }
+
+        // Check weather changes
+        const auto currentWeather = RE::Sky::GetSingleton()->currentWeather;
+        if (currentWeather != tracker.lastWeather && currentWeather) {
+            UpdateOutfits("Weather changed to " + GetWeatherName(currentWeather) + " for " + actorName);
+            tracker.lastWeather = currentWeather;
+            return; // Return to prevent multiple updates in the same check
+        }
+
+        // Check day part time changes
+        auto currentDayPart = REUtilities::CurrentGameDayPart();
+        if (!tracker.lastGameDayPart.has_value() || currentDayPart != tracker.lastGameDayPart) {
+            std::string dayPartString = (currentDayPart == GameDayPart::Day) ? "Day" : "Night";
+            UpdateOutfits("Day time changed to " + dayPartString + " for " + actorName);
+
+            tracker.lastGameDayPart = currentDayPart;
             return;
         }
 
