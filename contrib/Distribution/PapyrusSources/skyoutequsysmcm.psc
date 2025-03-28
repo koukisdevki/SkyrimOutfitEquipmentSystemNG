@@ -100,11 +100,13 @@ Event OnConfigOpen()
    RefreshCache()
 EndEvent
 Event OnConfigClose()
-   SkyrimOutfitEquipmentSystemNativeFuncs.SetOutfitsUsingLocation(Game.GetPlayer().GetCurrentLocation(), Weather.GetCurrentWeather())
-   SkyrimOutfitEquipmentSystemNativeFuncs.RefreshArmorForAllConfiguredActors()
-   ResetOutfitBrowser()
-   ResetOutfitEditor()
-   SkyrimOutfitEquipmentSystemNativeFuncs.AutoOutfitSwitchStateReset()
+   If SkyrimOutfitEquipmentSystemNativeFuncs.IsEnabled()
+      SkyrimOutfitEquipmentSystemNativeFuncs.SetOutfitsUsingLocation(Game.GetPlayer().GetCurrentLocation(), Weather.GetCurrentWeather())
+      SkyrimOutfitEquipmentSystemNativeFuncs.RefreshArmorForAllConfiguredActors()
+      ResetOutfitBrowser()
+      ResetOutfitEditor()
+      SkyrimOutfitEquipmentSystemNativeFuncs.AutoOutfitSwitchStateReset()
+   Endif
 EndEvent
 Event OnPageReset(String asPage)
    If asPage == "$SkyOutEquSys_MCM_Options"

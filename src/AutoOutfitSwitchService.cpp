@@ -131,6 +131,12 @@ void AutoOutfitSwitchService::CheckForChanges() {
         return;
     }
 
+    if (!ArmorAddonOverrideService::GetInstance().enabled) {
+        LOG(info, "SOES is currently disabled...");
+        return;
+    }
+
+
     LOG(info, "Checking changes across {}", actorStatusTrackers.size());
 
     // Then check individual actor state changes
