@@ -838,6 +838,8 @@ namespace OutfitSystem {
             result.push_back(modString);
         }
 
+        ranges::sort(result);
+
         return result;
     }
 
@@ -867,6 +869,8 @@ namespace OutfitSystem {
         for (const auto& outfitName : outfits | views::keys) {
             result.push_back(outfitName);
         }
+
+        ranges::sort(result);
 
         LOG(info, "Mapped {} outfits for {}. Returning {} mods.", outfits.size(), modName, result.size());
 
