@@ -772,33 +772,23 @@ namespace OutfitSystem {
 
                 // Skip excluded and duplicate plugins
                 if (!IsExcludedPlugin(filename)) {
+                    std::string outfitName = REUtilities::get_editorID(outfitForm);
+                    if (outfitName.empty()) {
+                        // Generate default name using form ID
+                        outfitName = fmt::format("Outfit_{:X}", outfitForm->formID & 0xFFF);
+                    }
+
                     if (uniqueMods.insert(filename).second) {
                         ModEntryInfo entry;
                         entry.filename = filename;
                         entry.loadOrderIndex = mod->GetCompileIndex();
                         entry.filePtr = mod;
                         userMods[filename] = entry;
-
-                        std::unordered_map<std::string, RE::BGSOutfit*> outfitMap;
-                        std::string outfitName = REUtilities::get_editorID(outfitForm);
-                        outfitMap[outfitName] = outfitForm;
-
-                        entry.outfitsMap = outfitMap;
-
-                        LOG(info, "Regular mod: {}", entry.filename);
-                        LOG(info, "Done processing: {}, Load order {}", filename, mod->GetCompileIndex());
                     }
-                    else if (userMods.contains(filename)) {
-                        ModEntryInfo& entry = userMods[filename];
-                        // Get outfit name
-                        std::string outfitName = REUtilities::get_editorID(outfitForm);
-                        if (outfitName.empty()) {
-                            // Generate default name using form ID
-                            outfitName = fmt::format("Outfit_{:X}", outfitForm->formID & 0xFFF);
-                        }
 
-                        entry.outfitsMap[outfitName] = outfitForm;
-                    }
+                    userMods[filename].outfitsMap[outfitName] = outfitForm;
+
+                    LOG(info, "Added outfit mod {} for {}", outfitName, filename);
                 }
             }
 
@@ -806,17 +796,18 @@ namespace OutfitSystem {
             for (const auto& mod : userMods) {
                 g_cachedModList.push_back(mod.second.filename);
                 g_cachedModMap[mod.second.filename] = mod.second;
-                // LOG(info, "End result mod: {}", mod.filename);
+                LOG(info, "Done processing: {}, Load order {}, Total Outfits {}", mod.second.filename, mod.second.filePtr->GetCompileIndex(), mod.second.outfitsMap.size());
             }
 
             std::sort(g_cachedModList.begin(), g_cachedModList.end(),
-                [&userMods](std::string a, std::string b) {
-                    auto aModInfo = userMods[a];
-                    auto bModInfo = userMods[b];
-                    return aModInfo.loadOrderIndex < bModInfo.loadOrderIndex;
-                });
+            [&userMods](const std::string& a, const std::string& b) {
+                const auto aModInfo = userMods[a];
+                const auto bModInfo = userMods[b];
+                return aModInfo.loadOrderIndex < bModInfo.loadOrderIndex;
+            });
 
             g_isModListCached = true;
+
             LOG(info, "Total mod count: {}", g_cachedModList.size());
         }
     }
