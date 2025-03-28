@@ -121,9 +121,17 @@ void AutoOutfitSwitchService::StateReset() {
 }
 
 void AutoOutfitSwitchService::CheckForChanges() {
-    if (!isMonitoring || isUpdating) {  // Don't process if already updating
+    if (!isMonitoring) {  // Don't process if already updating
+        LOG(info, "Not Monitoring");
         return;
     }
+
+    if (isUpdating) {
+        LOG(info, "Currently in the middle of updating...");
+        return;
+    }
+
+    LOG(info, "Checking changes across {}", actorStatusTrackers.size());
 
     // Then check individual actor state changes
     for (auto& [actor, tracker] : actorStatusTrackers) {
@@ -151,7 +159,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
         // Check location changes
         const auto currentLocation = actor->GetCurrentLocation();
-        if (currentLocation && (tracker.lastLocation == nullptr || currentLocation != tracker.lastLocation)) {
+        if (currentLocation && currentLocation != tracker.lastLocation) {
             std::string locationName = currentLocation && currentLocation->GetFullName() ?
                 currentLocation->GetFullName() : "Unknown Location";
             UpdateOutfits("Location changed to " + locationName + " for " + actorName);
@@ -161,7 +169,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
         // Check weather changes
         const auto currentWeather = RE::Sky::GetSingleton()->currentWeather;
-        if (currentWeather && (tracker.lastWeather == nullptr || currentWeather != tracker.lastWeather)) {
+        if (currentWeather && currentWeather != tracker.lastWeather) {
             UpdateOutfits("Weather changed to " + GetWeatherName(currentWeather) + " for " + actorName);
             tracker.lastWeather = currentWeather;
             return; // Return to prevent multiple updates in the same check
@@ -222,6 +230,8 @@ void AutoOutfitSwitchService::CheckForChanges() {
             return;
         }
     }
+
+    LOG(info, "No changes detected.");
 }
 
 void AutoOutfitSwitchService::UpdateOutfits(const std::string& reason) {

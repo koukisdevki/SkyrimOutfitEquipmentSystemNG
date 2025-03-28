@@ -210,6 +210,8 @@ void Callback_Serialization_Load(SKSE::SerializationInterface* intfc) {
     }
     //
     LOG(info, "Loading done!");
+    // reset state of autoswitch service
+    AutoOutfitSwitchService::GetSingleton().StateReset();
 }
 
 SKSEPluginLoad(const LoadInterface* a_skse) {
