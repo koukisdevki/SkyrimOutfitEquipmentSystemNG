@@ -90,8 +90,8 @@ void AutoOutfitSwitchService::StateReset() {
 
     // Initialize tracker for each actor
     for (auto* actor : actors) {
+        ActorActionStatusTracker tracker;
         if (actor && actor->Is3DLoaded()) {
-            ActorActionStatusTracker tracker;
             tracker.lastGameDayPart = REUtilities::CurrentGameDayPart();
             tracker.lastWeather = RE::Sky::GetSingleton()->currentWeather;
             tracker.lastLocation = actor->GetCurrentLocation();
@@ -101,10 +101,7 @@ void AutoOutfitSwitchService::StateReset() {
             tracker.lastSleepingStatus = REUtilities::IsActorSleeping(actor);
             tracker.lastSwimmingStatus = actor->AsActorState()->IsSwimming();
             tracker.lastOnMountStatus = actor->IsOnMount();
-
-            actorStatusTrackers[actor] = tracker;
         } else {
-            ActorActionStatusTracker tracker;
             tracker.lastGameDayPart = std::nullopt;
             tracker.lastWeather = nullptr;
             tracker.lastLocation = nullptr;
@@ -114,9 +111,13 @@ void AutoOutfitSwitchService::StateReset() {
             tracker.lastSleepingStatus = false;
             tracker.lastSwimmingStatus = false;
             tracker.lastOnMountStatus = false;
-
-            actorStatusTrackers[actor] = tracker;
         }
+
+        // set init load to false
+        tracker.initialized = false;
+
+        actorStatusTrackers[actor] = tracker;
+
     }
 }
 
@@ -154,6 +155,14 @@ void AutoOutfitSwitchService::CheckForChanges() {
             actorName = "Unnamed Actor";
         }
         std::string message;
+
+        // initialized check
+        if (!tracker.initialized) {
+            LOG(info, "The actor {} tracking is now initialized.", actor->GetDisplayFullName());
+            UpdateOutfits(message);
+            tracker.initialized = true;
+            return;
+        }
 
         // 3D load check
         if (tracker.last3DLoadedStatus == false) {

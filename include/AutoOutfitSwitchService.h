@@ -32,6 +32,7 @@ struct ActorActionStatusTracker {
     RE::TESWeather* lastWeather = nullptr;
     RE::BGSLocation* lastLocation = nullptr;
     std::optional<GameDayPart> lastGameDayPart = std::nullopt;
+    bool initialized = false;
     bool last3DLoadedStatus = false;
     bool lastInCombatStatus = false;
     bool lastInWaterStatus = false;
