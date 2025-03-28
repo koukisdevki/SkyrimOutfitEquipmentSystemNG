@@ -165,7 +165,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
         // Check location changes
         const auto currentLocation = actor->GetCurrentLocation();
-        if (currentLocation && currentLocation != tracker.lastLocation) {
+        if (currentLocation != tracker.lastLocation) {
             std::string locationName = currentLocation && currentLocation->GetFullName() ?
                 currentLocation->GetFullName() : "Unknown Location";
             UpdateOutfits("Location changed to " + locationName + " for " + actorName);
