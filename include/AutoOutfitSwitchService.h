@@ -29,6 +29,9 @@ enum class WEAPON_STATE : std::uint32_t
 };
 
 struct ActorActionStatusTracker {
+    RE::TESWeather* lastWeather = nullptr;
+    RE::BGSLocation* lastLocation = nullptr;
+    std::optional<GameDayPart> lastGameDayPart = std::nullopt;
     bool last3DLoadedStatus = false;
     bool lastInCombatStatus = false;
     bool lastInWaterStatus = false;
@@ -68,10 +71,6 @@ private:
     std::atomic<bool> threadRunning{false};
 
     std::map<RE::Actor*, ActorActionStatusTracker> actorStatusTrackers;
-
-    RE::TESWeather* lastWeather = nullptr;
-    RE::BGSLocation* lastLocation = nullptr;
-    GameDayPart lastGameDayPart;
 
     std::string GetWeatherName(RE::TESWeather* weather);
     void MonitorThreadFunc();
