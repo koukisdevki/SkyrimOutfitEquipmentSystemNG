@@ -136,7 +136,7 @@ RE::BSEventNotifyControl OutfitSystemEventSink::ProcessEvent(const RE::TESQuestS
     auto& systemCache = OutfitSystemCacheService::GetSingleton();
 
     for (const auto actor : armorService.actorOutfitAssignments | std::views::keys) {
-        systemCache.SetLoveSceneStateForActor(actor, REUtilities::IsActorInFlowerGirlScene(actor, true));
+        systemCache.SetLoveSceneStateForActor(actor, REUtilities::IsActorInFlowerGirlScene(actor));
     }
 
     return RE::BSEventNotifyControl::kContinue;

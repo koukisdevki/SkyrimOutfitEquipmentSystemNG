@@ -122,7 +122,7 @@ std::unordered_set<std::string> REUtilities::GetActorFactionEditorIDs(RE::Actor*
     return factionFormIDs;
 }
 
-bool REUtilities::IsActorInFlowerGirlScene(RE::Actor* actor, bool forceRefresh) {
+bool REUtilities::IsActorInFlowerGirlScene(RE::Actor* actor) {
     if (!actor) {
         LOG(info, "Actor is None");
         return false;
@@ -140,7 +140,6 @@ bool REUtilities::IsActorInFlowerGirlScene(RE::Actor* actor, bool forceRefresh) 
         LOG(info, "No FG faction keywords found");
         return false;
     }
-    auto actorFactionEditorIDs = GetActorFactionEditorIDs(actor, forceRefresh);
 
     RE::TESFaction* fgAnimationFaction = skyrim_cast<RE::TESFaction*>(fgFactionForm);
 
