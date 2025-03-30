@@ -102,7 +102,7 @@ void AutoOutfitSwitchService::StateReset() {
             tracker.lastSleepingStatus = REUtilities::IsActorSleeping(actor);
             tracker.lastSwimmingStatus = actor->AsActorState()->IsSwimming();
             tracker.lastOnMountStatus = actor->IsOnMount();
-            tracker.lastInLoveSceneStatus = REUtilities::IsActorInLoveScene(actor) || actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
+            tracker.lastInLoveSceneStatus = actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
         } else {
             tracker.lastGameDayPart = std::nullopt;
             tracker.lastWeather = nullptr;
@@ -253,8 +253,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
         }
 
         // Check love scene status
-        const bool currentlyInLoveSceneDetection = REUtilities::IsActorInLoveScene(actor, true);
-        const bool currentlyInLoveScene = currentlyInLoveSceneDetection || actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
+        const bool currentlyInLoveScene = actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
         if (currentlyInLoveScene != tracker.lastInLoveSceneStatus) {
             message = actorName + (currentlyInLoveScene ? " now in love scene" : " no longer in love scene");
             UpdateOutfits(message);

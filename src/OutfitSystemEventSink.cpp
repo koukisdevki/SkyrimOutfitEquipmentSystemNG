@@ -23,6 +23,36 @@ bool DoesActorHaveActiveEffect(RE::Actor* actor, RE::EffectSetting* effect) {
     return magicTarget->HasMagicEffect(effect);
 }
 
+bool IsFormIDFlowerGirlsQuest(RE::FormID formId) {
+    static bool initCheck = false;
+    static std::string logString = "";
+    static std::vector questFormIdStrings = {
+        LoveSceneStringFormID::FlowerGirlSceneThread1,
+        LoveSceneStringFormID::FlowerGirlSceneThread2,
+        LoveSceneStringFormID::FlowerGirlSceneThread3,
+        LoveSceneStringFormID::FlowerGirlSceneThread4,
+        LoveSceneStringFormID::FlowerGirlSceneThread5,
+    };
+
+    static std::unordered_set<RE::FormID> fgQuestSceneFormIDs;
+
+    if (initCheck && fgQuestSceneFormIDs.empty()) {
+        for (const auto& questFormIdString: questFormIdStrings) {
+            auto fgQuest = Forms::ParseFormString(questFormIdString);
+            if (fgQuest && fgQuest->formID) {
+                fgQuestSceneFormIDs.insert(fgQuest->formID);
+                logString += "-"+std::to_string(fgQuest->formID)+"-";
+            }
+        }
+    }
+
+    initCheck = true;
+
+    LOG(info, "Checking if formID {} is an fg quest within {}", formId, logString);
+
+    return fgQuestSceneFormIDs.contains(formId);
+}
+
 RE::BSEventNotifyControl CheckLoveSceneEffects(RE::TESObjectREFR* target, std::optional<RE::FormID> magicEvent, EventType effectType) {
     if (!target) {
         // LOG(info, "Actor is None");
@@ -59,45 +89,36 @@ RE::BSEventNotifyControl CheckLoveSceneEffects(RE::TESObjectREFR* target, std::o
     }
 
     auto& systemCache = OutfitSystemCacheService::GetSingleton();
-    bool result = false;
 
     if (magicEvent.has_value()) {
-        if (magicEvent.value() == fgHeadEffectForm->formID || magicEvent.value() == fgLowerEffectForm->formID) result = false;
+        bool result = false;
+        LOG(info, "Checking if actor has FG effects");
+
+        if (magicEvent.value() == fgHeadEffectForm->formID || magicEvent.value() == fgLowerEffectForm->formID) result = true;
+
+        if (result) {
+            LOG(info, "Actor {} has FG effects, event type {}", actor->GetName(), effectType == Apply ? "Apply" : "Remove");
+        }
+        else {
+            LOG(info, "Actor {} determined not to have FG effects after event type {}", actor->GetName(), effectType == Apply ? "Apply" : "Remove");
+        }
+
+        LOG(info, "Compared (formID {} OR formID {}) vs formID {}", fgHeadEffectForm->formID, fgLowerEffectForm->formID, magicEvent.value());
+
         systemCache.SetLoveSceneStateForActor(actor, result);
 
         return RE::BSEventNotifyControl::kContinue;
     }
-
-    RE::EffectSetting* fgHeadLightEffect = skyrim_cast<RE::EffectSetting*>(fgHeadEffectForm);
-    RE::EffectSetting* fgLowerLightEffect = skyrim_cast<RE::EffectSetting*>(fgLowerEffectForm);
-
-    if (!fgHeadLightEffect || !fgLowerLightEffect) {
-        // LOG(info, "Could not convert fg light effect forms to effect objects.");
-        return RE::BSEventNotifyControl::kContinue;
-    }
-
-    LOG(info, "Checking if actor has FG effects");
-
-    result = DoesActorHaveActiveEffect(actor, fgHeadLightEffect) || DoesActorHaveActiveEffect(actor, fgLowerLightEffect);
-
-    if (result) {
-        LOG(info, "Actor {} has FG effects, event type {}", actor->GetName(), effectType == Apply ? "Apply" : "Remove");
-    }
-    else {
-        LOG(info, "Actor {} determined not to have FG effects after event type {}", actor->GetName(), effectType == Apply ? "Apply" : "Remove");
-    }
-
-    LOG(info, "Compared (formID {} OR formID {}) vs formID {}", fgHeadLightEffect->formID, fgLowerLightEffect->formID, magicEvent.value());
-
-    // change love scene depending on the results
-    systemCache.SetLoveSceneStateForActor(actor, result);
 
     return RE::BSEventNotifyControl::kContinue;
 }
 
 RE::BSEventNotifyControl OutfitSystemEventSink::ProcessEvent(const RE::TESMagicEffectApplyEvent* event,
                                                              RE::BSTEventSource<RE::TESMagicEffectApplyEvent>*) {
-    LOG(info, "Effect {} applied on {} by {}", event->magicEffect, event->target.get()->GetName(), event->caster.get()->GetName());
+
+    if (event->target != event->caster) return RE::BSEventNotifyControl::kContinue;
+
+    LOG(info, "Effect {} applied on {} by self", event->magicEffect, event->target.get()->GetName());
 
     CheckLoveSceneEffects(event->target.get(), event->magicEffect, Apply);
 
@@ -108,12 +129,14 @@ RE::BSEventNotifyControl OutfitSystemEventSink::ProcessEvent(const RE::TESQuestS
                                                              RE::BSTEventSource<RE::TESQuestStartStopEvent>*) {
     LOG(info, "Starting/Stoping Quest {} started? {}", event->formID, event->started);
 
-    if (event->started) return RE::BSEventNotifyControl::kContinue;
+    if (event->started == true) return RE::BSEventNotifyControl::kContinue;
+    if (!IsFormIDFlowerGirlsQuest(event->formID)) return RE::BSEventNotifyControl::kContinue;
 
     auto& armorService = ArmorAddonOverrideService::GetInstance();
+    auto& systemCache = OutfitSystemCacheService::GetSingleton();
 
     for (const auto actor : armorService.actorOutfitAssignments | std::views::keys) {
-        CheckLoveSceneEffects(actor, std::nullopt, event->started ? Apply : Middle);
+        systemCache.SetLoveSceneStateForActor(actor, REUtilities::IsActorInFlowerGirlScene(actor, true));
     }
 
     return RE::BSEventNotifyControl::kContinue;

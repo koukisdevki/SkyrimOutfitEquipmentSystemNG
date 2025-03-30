@@ -48,7 +48,7 @@ namespace OutfitSystem {
                         std::optional<OutfitSystemCacheService::ActorStateCache> actorStateCacheOpt = cacheService.GetStateForActor(actor);
 
                         // Exceptions
-                        if (REUtilities::IsActorInLoveScene(actor) || (actorStateCacheOpt.has_value() && actorStateCacheOpt.value().loveScene)) inExceptionState = true;
+                        if (actorStateCacheOpt.has_value() && actorStateCacheOpt.value().loveScene) inExceptionState = true;
 
                         // If the armor to be equipped is not part of the list, then don't equip anything.
                         if (!currentOutfitArmors.empty() && !currentOutfitArmors.contains(armor) && !inExceptionState) {

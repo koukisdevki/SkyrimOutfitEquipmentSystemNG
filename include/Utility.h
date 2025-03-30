@@ -33,6 +33,11 @@ public:
 
 namespace LoveSceneStringFormID {
     const static std::string FlowerGirlFaction = "0x5BEF2C|FlowerGirls SE.esm";
+    const static std::string FlowerGirlSceneThread1 = "0x5BEF2F|FlowerGirls SE.esm";
+    const static std::string FlowerGirlSceneThread2 = "0x5C41DD|FlowerGirls SE.esm";
+    const static std::string FlowerGirlSceneThread3 = "0x5F1C9B|FlowerGirls SE.esm";
+    const static std::string FlowerGirlSceneThread4 = "0x5F1C9C|FlowerGirls SE.esm";
+    const static std::string FlowerGirlSceneThread5 = "0x5F1C9D|FlowerGirls SE.esm";
     const static std::string FlowerGirlLightHeadEffect = "0x54A808|FlowerGirls SE.esm";
     const static std::string FlowerGirlLightLowerEffect = "0x54A80A|FlowerGirls SE.esm";
 }
@@ -56,7 +61,7 @@ namespace REUtilities {
     bool IsActorSleeping(RE::Actor* actor);
     std::unordered_set<RE::TESFaction*> GetActorFactions(RE::Actor* actor, bool forceRefresh = false);
     std::unordered_set<std::string> GetActorFactionEditorIDs(RE::Actor* actor, bool forceRefresh = false);
-    bool IsActorInLoveScene(RE::Actor* actor, bool forceRefresh = false);
+    bool IsActorInFlowerGirlScene(RE::Actor* actor, bool forceRefresh = false);
     GameTime CurrentGameHour();
     GameDayPart CurrentGameDayPart();
     int GetRandomInt(int min, int max);

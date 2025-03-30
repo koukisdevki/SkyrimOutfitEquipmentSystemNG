@@ -263,7 +263,6 @@ SKSEPluginLoad(const LoadInterface* a_skse) {
     auto* eventSink = OutfitSystemEventSink::GetSingleton();
 
     eventSourceHolder->AddEventSink<RE::TESMagicEffectApplyEvent>(eventSink);
-    // eventSourceHolder->AddEventSink<RE::TESActiveEffectApplyRemoveEvent>(eventSink);
     eventSourceHolder->AddEventSink<RE::TESQuestStartStopEvent>(eventSink);
     return true;
 }

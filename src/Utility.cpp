@@ -122,98 +122,45 @@ std::unordered_set<std::string> REUtilities::GetActorFactionEditorIDs(RE::Actor*
     return factionFormIDs;
 }
 
-// bool REUtilities::IsActorInLoveScene(RE::Actor* actor, bool forceRefresh) {
-//     if (!actor) {
-//         LOG(info, "Actor is None");
-//         return false;
-//     }
-//
-//     static bool initCheck = false;
-//     static RE::TESForm* fgFactionForm;
-//
-//     if (fgFactionForm == nullptr && !initCheck) {
-//         fgFactionForm = Forms::ParseFormString(LoveSceneStringFormID::FlowerGirl);
-//         initCheck = true;
-//     }
-//
-//     if (!fgFactionForm) {
-//         LOG(info, "No FG faction keywords found");
-//         return false;
-//     }
-//     // auto actorFactionEditorIDs = GetActorFactionEditorIDs(actor, forceRefresh);
-//
-//     RE::TESFaction* fgAnimationFaction = skyrim_cast<RE::TESFaction*>(fgFactionForm);
-//
-//     if (!fgAnimationFaction) {
-//         LOG(info, "Could not convert fgFaction form to faction");
-//         return false;
-//     }
-//
-//     LOG(info, "Checking if actor is in FG faction");
-//
-//     // bool result = actor->IsInFaction(fgAnimationFaction);
-//     bool result = false;
-//
-//     if (result) {
-//         LOG(info, "Actor {} is in FG faction", actor->GetName());
-//     }
-//     else {
-//         LOG(info, "Actor {} is not in FG faction", actor->GetName());
-//     }
-//
-//     return result;
-// }
-
-
-bool REUtilities::IsActorInLoveScene(RE::Actor* actor, bool forceRefresh) {
+bool REUtilities::IsActorInFlowerGirlScene(RE::Actor* actor, bool forceRefresh) {
     if (!actor) {
         LOG(info, "Actor is None");
         return false;
     }
 
-    return false;
+    static bool initCheck = false;
+    static RE::TESForm* fgFactionForm;
 
-    // static bool initCheck = false;
-    // static RE::TESForm* fgHeadEffectForm;
-    // static RE::TESForm* fgLowerEffectForm;
-    //
-    // if (fgHeadEffectForm == nullptr && !initCheck) {
-    //     fgHeadEffectForm = Forms::ParseFormString(LoveSceneStringFormID::FlowerGirlLightHeadEffect);
-    // }
-    //
-    // if (fgLowerEffectForm == nullptr && !initCheck) {
-    //     fgLowerEffectForm = Forms::ParseFormString(LoveSceneStringFormID::FlowerGirlLightLowerEffect);
-    //
-    // }
-    //
-    // initCheck = true;
-    //
-    // if (!fgHeadEffectForm || !fgLowerEffectForm) {
-    //     LOG(info, "All FG faction lights not found");
-    //     return false;
-    // }
-    //
-    // RE::EffectSetting* fgHeadLightEffect = skyrim_cast<RE::EffectSetting*>(fgHeadEffectForm);
-    // RE::EffectSetting* fgLowerLightEffect = skyrim_cast<RE::EffectSetting*>(fgLowerEffectForm);
-    //
-    // if (!fgHeadLightEffect || !fgLowerLightEffect) {
-    //     LOG(info, "Could not convert fg light effect forms to effect objects.");
-    //     return false;
-    // }
-    //
-    // LOG(info, "Checking if actor has FG effects");
-    //
-    // bool result = false;
-    // // bool result = DoesActorHaveActiveEffect(actor, fgHeadLightEffect) || DoesActorHaveActiveEffect(actor, fgLowerLightEffect);
-    //
-    // if (result) {
-    //     LOG(info, "Actor {} has FG effects", actor->GetName());
-    // }
-    // else {
-    //     LOG(info, "Actor {} does not have FG effects", actor->GetName());
-    // }
-    //
-    // return result;
+    if (fgFactionForm == nullptr && !initCheck) {
+        fgFactionForm = Forms::ParseFormString(LoveSceneStringFormID::FlowerGirlFaction);
+        initCheck = true;
+    }
+
+    if (!fgFactionForm) {
+        LOG(info, "No FG faction keywords found");
+        return false;
+    }
+    auto actorFactionEditorIDs = GetActorFactionEditorIDs(actor, forceRefresh);
+
+    RE::TESFaction* fgAnimationFaction = skyrim_cast<RE::TESFaction*>(fgFactionForm);
+
+    if (!fgAnimationFaction) {
+        LOG(info, "Could not convert fgFaction form to faction");
+        return false;
+    }
+
+    LOG(info, "Checking if actor is in FG faction");
+
+    bool result = actor->IsInFaction(fgAnimationFaction);
+
+    if (result) {
+        LOG(info, "Actor {} is in FG faction", actor->GetName());
+    }
+    else {
+        LOG(info, "Actor {} is not in FG faction", actor->GetName());
+    }
+
+    return result;
 }
 
 bool REUtilities::IsActorSleeping(RE::Actor* actor) {
