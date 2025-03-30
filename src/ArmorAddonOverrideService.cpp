@@ -3,6 +3,7 @@
 #include <google/protobuf/util/json_util.h>
 
 #include "Forms.h"
+#include "OutfitSystemCacheService.h"
 
 #ifndef SKYRIMOUTFITEQUIPMENTSYSTEMNG_INCLUDE_RE_REAUGMENTS_H
 #define SKYRIMOUTFITEQUIPMENTSYSTEMNG_INCLUDE_RE_REAUGMENTS_H
@@ -321,8 +322,13 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
         inInterior = cell->IsInteriorCell();
     }
 
+    auto& cacheService = OutfitSystemCacheService::GetSingleton();
+
     if (target->Is3DLoaded()) {
         // Action based location
+        std::optional<OutfitSystemCacheService::ActorStateCache> actorStateCacheOpt = cacheService.GetStateForActor(target);
+
+        CHECK_LOCATION(LoveScene, actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false);
         CHECK_LOCATION(Mounting, target->IsOnMount());
         CHECK_LOCATION(Swimming, target->AsActorState()->IsSwimming());
         CHECK_LOCATION(Sleeping, REUtilities::IsActorSleeping(target));

@@ -1,0 +1,10 @@
+See the following as needed, make sure all folders in the dependencies are filled. Just copy paste source files into /{dependency}/scripts/source.
+Check ppj files to see which imports pyro will need.
+
+<Import>https://github.com/MrOctopus/nl_online/tree/main/jcontainersse/source</Import>
+<Import>https://github.com/eeveelo/PapyrusUtil/tree/master/Scripts/Source</Import>
+<Import>https://github.com/CE0/OSA-SE/tree/master/Data/Scripts/Source</Import>
+<Import>https://github.com/Osmosis-Wrench/racemenu-scripts/tree/main/scripts/source</Import>
+<Import>https://github.com/MrOctopus/nl_online/tree/main/skyui/source</Import>
+<Import>https://github.com/MrOctopus/nl_online/tree/main/skse64/source</Import>
+<Import>https://github.com/MrOctopus/nl_online/tree/main/sse/source</Import>

@@ -70,3 +70,25 @@ proto::OutfitSystemCache OutfitSystemCacheService::save() {
 
     return out;
 }
+
+bool OutfitSystemCacheService::SetLoveSceneStateForActor(RE::Actor* actor, bool state) {
+    //get armor service
+    auto& armorService = ArmorAddonOverrideService::GetInstance();
+
+    if (!armorService.actorOutfitAssignments.contains(actor)) return false;
+
+    if (!actorStates.contains(actor)) actorStates[actor] = ActorStateCache();
+    actorStates[actor].loveScene = state;
+
+    return true;
+}
+
+std::optional<OutfitSystemCacheService::ActorStateCache> OutfitSystemCacheService::GetStateForActor(RE::Actor* actor) {
+    auto& armorService = ArmorAddonOverrideService::GetInstance();
+
+    if (!armorService.actorOutfitAssignments.contains(actor)) return std::nullopt;
+
+    if (!actorStates.contains(actor)) return std::nullopt;
+
+    return actorStates[actor];
+}

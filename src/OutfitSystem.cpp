@@ -1291,6 +1291,7 @@ namespace OutfitSystem {
             LocationType::Sleeping,
             LocationType::Swimming,
             LocationType::Mounting,
+            LocationType::LoveScene,
         }) {
             result.push_back(static_cast<std::uint32_t>(i));
         }
@@ -1411,6 +1412,34 @@ namespace OutfitSystem {
         } else {
             // Empty string means "no outfit assigned" for this location type.
             return RE::BSFixedString("");
+        }
+    }
+
+    void SetLoveSceneForActors(
+        RE::BSScript::IVirtualMachine* registry,
+        std::uint32_t stackId,
+        RE::StaticFunctionTag*,
+        std::vector<RE::Actor*> actors)
+    {
+        LogExit exitPrint("SetLoveSceneForActors"sv);
+        auto& systemCache = OutfitSystemCacheService::GetSingleton();
+
+        for (auto& actor : actors) {
+            systemCache.SetLoveSceneStateForActor(actor, true);
+        }
+    }
+
+    void UnsetLoveSceneForActors(
+        RE::BSScript::IVirtualMachine* registry,
+        std::uint32_t stackId,
+        RE::StaticFunctionTag*,
+        std::vector<RE::Actor*> actors)
+    {
+        LogExit exitPrint("SetLoveSceneForActors"sv);
+        auto& systemCache = OutfitSystemCacheService::GetSingleton();
+
+        for (auto& actor : actors) {
+            systemCache.SetLoveSceneStateForActor(actor, false);
         }
     }
 
@@ -1727,5 +1756,13 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "SetNPCInventoryManagementMode",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         SetNPCInventoryManagementMode);
+    registry->RegisterFunction(
+        "SetLoveSceneForActors",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        SetLoveSceneForActors);
+    registry->RegisterFunction(
+        "UnsetLoveSceneForActors",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        UnsetLoveSceneForActors);
     return true;
 }

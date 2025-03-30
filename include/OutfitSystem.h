@@ -1,5 +1,6 @@
 #include "ArmorAddonOverrideService.h"
 #include "AutoOutfitSwitchService.h"
+#include "OutfitSystemCacheService.h"
 
 #pragma once
 
@@ -40,8 +41,17 @@ namespace OutfitSystem {
                     if (!isPlayerCharacter && !outfitAssignment.currentOutfitName.empty() && armorAddonOverrideService.outfits.contains(outfitAssignment.currentOutfitName)) {
                         auto currentOutfitArmors = armorAddonOverrideService.outfits.at(outfitAssignment.currentOutfitName).m_armors;
 
-                        // If the armor to be equiped is not part of the list, then don't equip anything.
-                        if (!currentOutfitArmors.empty() && !currentOutfitArmors.contains(armor)) {
+                        // When in an exception state, i.e love scene, let that system equip/unquip whatever it wants.
+                        bool inExceptionState = false;
+
+                        auto& cacheService = OutfitSystemCacheService::GetSingleton();
+                        std::optional<OutfitSystemCacheService::ActorStateCache> actorStateCacheOpt = cacheService.GetStateForActor(actor);
+
+                        // Exceptions
+                        if (actorStateCacheOpt.has_value() && actorStateCacheOpt.value().loveScene) inExceptionState = true;
+
+                        // If the armor to be equipped is not part of the list, then don't equip anything.
+                        if (!currentOutfitArmors.empty() && !currentOutfitArmors.contains(armor) && !inExceptionState) {
                             LOG(info, "Intercepted actor {}'s equip. Cannot equip {} because its not part of {}", actor->GetDisplayFullName(), armor->GetFormID(), outfitAssignment.currentOutfitName);
                             return;
                         }

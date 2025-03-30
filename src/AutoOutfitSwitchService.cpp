@@ -4,11 +4,12 @@
 
 // AutoOutfitSwitchService.cpp
 #include "AutoOutfitSwitchService.h"
-#include "ArmorAddonOverrideService.h"
 
 #include <Utility.h>
 
+#include "ArmorAddonOverrideService.h"
 #include "OutfitSystem.h"
+#include "OutfitSystemCacheService.h"
 
 void AutoOutfitSwitchService::Initialize() {
     EnableMonitoring(true);
@@ -83,6 +84,7 @@ void AutoOutfitSwitchService::StateReset() {
 
     // Get the list of all actors
     auto& overrideService = ArmorAddonOverrideService::GetInstance();
+    auto& cacheService = OutfitSystemCacheService::GetSingleton();
     auto actors = overrideService.listActors();
 
     // If main character is not part of the check changes, add it since its essential for tracking
@@ -91,6 +93,8 @@ void AutoOutfitSwitchService::StateReset() {
     // Initialize tracker for each actor
     for (auto* actor : actors) {
         ActorActionStatusTracker tracker;
+        //get state for actor
+        std::optional<OutfitSystemCacheService::ActorStateCache> actorStateCacheOpt = cacheService.GetStateForActor(actor);
         if (actor && actor->Is3DLoaded()) {
             tracker.lastGameDayPart = REUtilities::CurrentGameDayPart();
             tracker.lastWeather = RE::Sky::GetSingleton()->currentWeather;
@@ -101,6 +105,7 @@ void AutoOutfitSwitchService::StateReset() {
             tracker.lastSleepingStatus = REUtilities::IsActorSleeping(actor);
             tracker.lastSwimmingStatus = actor->AsActorState()->IsSwimming();
             tracker.lastOnMountStatus = actor->IsOnMount();
+            tracker.lastInLoveSceneStatus = actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
         } else {
             tracker.lastGameDayPart = std::nullopt;
             tracker.lastWeather = nullptr;
@@ -111,6 +116,7 @@ void AutoOutfitSwitchService::StateReset() {
             tracker.lastSleepingStatus = false;
             tracker.lastSwimmingStatus = false;
             tracker.lastOnMountStatus = false;
+            tracker.lastInLoveSceneStatus = false;
         }
 
         // set init load to false
@@ -140,6 +146,8 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
     LOG(info, "Checking changes across {}", actorStatusTrackers.size());
 
+    auto& cacheService = OutfitSystemCacheService::GetSingleton();
+
     // Then check individual actor state changes
     for (auto& [actor, tracker] : actorStatusTrackers) {
         if (!actor) continue;
@@ -155,6 +163,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
             actorName = "Unnamed Actor";
         }
         std::string message;
+        std::optional<OutfitSystemCacheService::ActorStateCache> actorStateCacheOpt = cacheService.GetStateForActor(actor);
 
         // initialized check
         if (!tracker.initialized) {
@@ -242,6 +251,15 @@ void AutoOutfitSwitchService::CheckForChanges() {
             message = actorName + (currentlyOnMount ? " now on mount" : " no longer on mount");
             UpdateOutfits(message);
             tracker.lastOnMountStatus = currentlyOnMount;
+            return;
+        }
+
+        // Check love scene status
+        const bool currentlyInLoveScene = actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
+        if (currentlyInLoveScene != tracker.lastInLoveSceneStatus) {
+            message = actorName + (currentlyInLoveScene ? " now in love scene" : " no longer in love scene");
+            UpdateOutfits(message);
+            tracker.lastInLoveSceneStatus = currentlyInLoveScene;
             return;
         }
     }

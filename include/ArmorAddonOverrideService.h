@@ -52,6 +52,7 @@ enum class LocationType : std::uint32_t {
     Sleeping = 1700,
     Swimming = 1800,
     Mounting = 1900,
+    LoveScene = 2000,
 
     // Specific Locations
     Dungeon = 5500,

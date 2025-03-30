@@ -3,36 +3,24 @@
 	"tasks": [
 		{
 			"type": "pyro",
-			"projectFile": "Debug.ppj",
-			"gamePath": "I:\\SteamLibrary\\steamapps\\common\\Skyrim Special Edition",
-			"problemMatcher": [
-				"$PapyrusCompiler"
-			],
-			"label": "Compile Papyrus Scripts (Debug)",
-			"group": {
-				"kind": "build"
-			}
-		},
-		{
-			"type": "pyro",
-			"projectFile": "Debug-Tests.ppj",
-			"gamePath": "I:\\SteamLibrary\\steamapps\\common\\Skyrim Special Edition",
-			"problemMatcher": [
-				"$PapyrusCompiler"
-			],
-			"label": "Compile Papyrus Test Scripts",
-			"group": {
-				"kind": "build"
-			}
-		},
-		{
-			"type": "pyro",
 			"projectFile": "Release.ppj",
 			"gamePath": "I:\\SteamLibrary\\steamapps\\common\\Skyrim Special Edition",
 			"problemMatcher": [
 				"$PapyrusCompiler"
 			],
 			"label": "Compile Papyrus Scripts (Release)",
+			"group": {
+				"kind": "build"
+			}
+		},
+		{
+			"type": "pyro",
+			"projectFile": "OStim.ppj",
+			"gamePath": "I:\\SteamLibrary\\steamapps\\common\\Skyrim Special Edition",
+			"problemMatcher": [
+				"$PapyrusCompiler"
+			],
+			"label": "Compile Optional Papyrus Scripts (OStim)",
 			"group": {
 				"kind": "build"
 			}

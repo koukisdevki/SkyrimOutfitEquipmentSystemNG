@@ -111,3 +111,6 @@ Int      Function AddOutfitFromModToOutfitList(String modName, String formEditor
 Int      Function AddAllOutfitsFromModToOutfitList(String modName) Global Native
 
          Function AutoOutfitSwitchStateReset () Global Native
+
+         Function SetLoveSceneForActors(Actor[] actors) Global Native
+         Function UnsetLoveSceneForActors(Actor[] actors) Global Native

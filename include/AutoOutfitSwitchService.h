@@ -4,11 +4,7 @@
 
 #pragma once
 
-#ifndef AUTOOUTFITSWITCHSERVICE_H
-#define AUTOOUTFITSWITCHSERVICE_H
 #include <Utility.h>
-
-#endif //AUTOOUTFITSWITCHSERVICE_H
 
 // Add to header:
 #include <thread>
@@ -16,6 +12,11 @@
 #include <chrono>
 
 #include "RE/Skyrim.h"
+
+// AutoOutfitSwitchService.cpp
+#include "AutoOutfitSwitchService.h"
+
+#include "OutfitSystemCacheService.h"
 
 
 enum class WEAPON_STATE : std::uint32_t
@@ -34,6 +35,7 @@ struct ActorActionStatusTracker {
     std::optional<GameDayPart> lastGameDayPart = std::nullopt;
     bool initialized = false;
     bool last3DLoadedStatus = false;
+    bool lastInLoveSceneStatus = false;
     bool lastInCombatStatus = false;
     bool lastInWaterStatus = false;
     bool lastSleepingStatus = false;

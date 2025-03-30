@@ -537,3 +537,6 @@ contrib/Distribution/**/*.dll
 contrib/Distribution/**/*.pdb
 contrib/Distribution/**/*.pex
 contrib/Distribution.rar
+
+# Ignore dependencies, put them in.
+dependencies/**/scripts/source/*
