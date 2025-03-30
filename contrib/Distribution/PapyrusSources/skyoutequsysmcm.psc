@@ -162,8 +162,14 @@ EndFunction
 Function ResetOutfitBrowser()
    _iOutfitBrowserPage   = 0
    _iOutfitEditorBodySlotPage = 0
-   _kActorSelection_SelectCandidates = new Actor[1]
-   _aCurrentActor = Game.GetPlayer()
+   _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ListActors()
+
+   If _kActorSelection_SelectCandidates.Length > 0
+      _aCurrentActor = _kActorSelection_SelectCandidates[0]
+   Else 
+      _aCurrentActor = Game.GetPlayer()
+   Endif 
+   
    _sEditingOutfit       = ""
    _sOutfitShowingContextMenu = ""
    _sOutfitNames = new String[1]
