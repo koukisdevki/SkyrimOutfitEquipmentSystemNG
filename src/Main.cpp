@@ -68,6 +68,25 @@ void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message);
 void Callback_Serialization_Save(SKSE::SerializationInterface* intfc);
 void Callback_Serialization_Load(SKSE::SerializationInterface* intfc);
 
+void Game_Full_Load_Initialize_Callback() {
+    if (REUtilities::IsFlowerGirlsInLoadOrder()) {
+        LOG(info, "Flowergirls detected, adding support.");
+
+        auto* eventSourceHolder = RE::ScriptEventSourceHolder::GetSingleton();
+        auto* eventSink = OutfitSystemEventSink::GetSingleton();
+
+        eventSourceHolder->AddEventSink<RE::TESMagicEffectApplyEvent>(eventSink);
+        eventSourceHolder->AddEventSink<RE::TESQuestStartStopEvent>(eventSink);
+    }
+
+    // AAOS::load resets as well, but this is needed in case the save we're about to load doesn't have any AAOS
+    // data.
+    ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
+
+    // 'OSCS' fresh instance as well
+    OutfitSystemCacheService::GetSingleton() = OutfitSystemCacheService();
+}
+
 void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
     if (message->type == SKSE::MessagingInterface::kPostLoad) {
         // Install hooks
@@ -75,27 +94,17 @@ void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
     } else if (message->type == SKSE::MessagingInterface::kPostPostLoad) {
     } else if (message->type == SKSE::MessagingInterface::kDataLoaded) {
     } else if (message->type == SKSE::MessagingInterface::kNewGame) {
+        Game_Full_Load_Initialize_Callback();
+
         auto pc = RE::PlayerCharacter::GetSingleton();
-        ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
         ArmorAddonOverrideService::GetInstance().addActor(pc);
 
-        // Modify the service to handle cleanup internally
-        auto& autoOutfitservice = AutoOutfitSwitchService::GetSingleton();
-        autoOutfitservice.Initialize();
-
-        // 'OSCS' fresh instance
-        OutfitSystemCacheService::GetSingleton() = OutfitSystemCacheService();
+        AutoOutfitSwitchService::GetSingleton().Initialize();
     } else if (message->type == SKSE::MessagingInterface::kPreLoadGame) {
-        // AAOS::load resets as well, but this is needed in case the save we're about to load doesn't have any AAOS
-        // data.
-        ArmorAddonOverrideService::GetInstance() = ArmorAddonOverrideService();
-
-        // 'OSCS' fresh instance as well
-        OutfitSystemCacheService::GetSingleton() = OutfitSystemCacheService();
+        Game_Full_Load_Initialize_Callback();
     }
     else if (message->type == SKSE::MessagingInterface::kPostLoadGame) {
-        auto& autoOutfitservice = AutoOutfitSwitchService::GetSingleton();
-        autoOutfitservice.Initialize();
+        AutoOutfitSwitchService::GetSingleton().Initialize();
     }
 }
 
@@ -259,10 +268,5 @@ SKSEPluginLoad(const LoadInterface* a_skse) {
     LOG(info, "Registering papyrus");
     SKSE::GetPapyrusInterface()->Register(OutfitSystem::RegisterPapyrus);
 
-    auto* eventSourceHolder = RE::ScriptEventSourceHolder::GetSingleton();
-    auto* eventSink = OutfitSystemEventSink::GetSingleton();
-
-    eventSourceHolder->AddEventSink<RE::TESMagicEffectApplyEvent>(eventSink);
-    eventSourceHolder->AddEventSink<RE::TESQuestStartStopEvent>(eventSink);
     return true;
 }

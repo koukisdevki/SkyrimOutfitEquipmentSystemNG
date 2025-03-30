@@ -61,6 +61,7 @@ namespace REUtilities {
     bool IsActorSleeping(RE::Actor* actor);
     std::unordered_set<RE::TESFaction*> GetActorFactions(RE::Actor* actor, bool forceRefresh = false);
     std::unordered_set<std::string> GetActorFactionEditorIDs(RE::Actor* actor, bool forceRefresh = false);
+    bool IsFlowerGirlsInLoadOrder();
     bool IsActorInFlowerGirlScene(RE::Actor* actor);
     GameTime CurrentGameHour();
     GameDayPart CurrentGameDayPart();

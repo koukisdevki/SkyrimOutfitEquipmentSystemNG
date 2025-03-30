@@ -162,6 +162,12 @@ bool REUtilities::IsActorInFlowerGirlScene(RE::Actor* actor) {
     return result;
 }
 
+bool REUtilities::IsFlowerGirlsInLoadOrder() {
+    // faction check to see if its loaded
+    auto fgFactionForm = Forms::ParseFormString(LoveSceneStringFormID::FlowerGirlFaction);
+    return fgFactionForm != nullptr;
+}
+
 bool REUtilities::IsActorSleeping(RE::Actor* actor) {
     if (!actor) {
         LOG(info, "Actor is None");
