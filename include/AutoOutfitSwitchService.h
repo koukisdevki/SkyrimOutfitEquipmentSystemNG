@@ -60,7 +60,7 @@ public:
     void EnableMonitoring(bool enable);
     void RestartMonitoring();
     void CheckForChanges();
-    void UpdateOutfits(const std::string& reason);
+    void UpdateOutfits(const std::string& reason, int delayMS = 0);
     void StateReset();
 
 private:

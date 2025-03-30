@@ -7,6 +7,7 @@
 #include "Hooking.h"
 #include "OutfitSystem.h"
 #include "OutfitSystemCacheService.h"
+#include "OutfitSystemEventSink.h"
 #include "Utility.h"
 
 using namespace RE::BSScript;
@@ -258,5 +259,11 @@ SKSEPluginLoad(const LoadInterface* a_skse) {
     LOG(info, "Registering papyrus");
     SKSE::GetPapyrusInterface()->Register(OutfitSystem::RegisterPapyrus);
 
+    auto* eventSourceHolder = RE::ScriptEventSourceHolder::GetSingleton();
+    auto* eventSink = OutfitSystemEventSink::GetSingleton();
+
+    eventSourceHolder->AddEventSink<RE::TESMagicEffectApplyEvent>(eventSink);
+    // eventSourceHolder->AddEventSink<RE::TESActiveEffectApplyRemoveEvent>(eventSink);
+    eventSourceHolder->AddEventSink<RE::TESQuestStartStopEvent>(eventSink);
     return true;
 }

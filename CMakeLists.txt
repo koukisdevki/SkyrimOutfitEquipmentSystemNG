@@ -41,6 +41,7 @@ set(headers
         include/Forms.h
         include/AutoOutfitSwitchService.h
         include/OutfitSystemCacheService.h
+        include/OutfitSystemEventSink.h
 )
 
 set(sources
@@ -53,6 +54,7 @@ set(sources
         src/Forms.cpp
         src/AutoOutfitSwitchService.cpp
         src/OutfitSystemCacheService.cpp
+        src/OutfitSystemEventSink.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
 
 source_group(

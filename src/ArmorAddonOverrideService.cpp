@@ -328,7 +328,7 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
         // Action based location
         std::optional<OutfitSystemCacheService::ActorStateCache> actorStateCacheOpt = cacheService.GetStateForActor(target);
 
-        CHECK_LOCATION(LoveScene, actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false);
+        CHECK_LOCATION(LoveScene, REUtilities::IsActorInLoveScene(target) || actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false);
         CHECK_LOCATION(Mounting, target->IsOnMount());
         CHECK_LOCATION(Swimming, target->AsActorState()->IsSwimming());
         CHECK_LOCATION(Sleeping, REUtilities::IsActorSleeping(target));

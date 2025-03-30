@@ -31,6 +31,12 @@ public:
     };
 };
 
+namespace LoveSceneStringFormID {
+    const static std::string FlowerGirlFaction = "0x5BEF2C|FlowerGirls SE.esm";
+    const static std::string FlowerGirlLightHeadEffect = "0x54A808|FlowerGirls SE.esm";
+    const static std::string FlowerGirlLightLowerEffect = "0x54A80A|FlowerGirls SE.esm";
+}
+
 enum class GameDayPart : uint8_t {
     Day = 0,
     Night = 1,
@@ -48,6 +54,9 @@ struct GameTime {
 
 namespace REUtilities {
     bool IsActorSleeping(RE::Actor* actor);
+    std::unordered_set<RE::TESFaction*> GetActorFactions(RE::Actor* actor, bool forceRefresh = false);
+    std::unordered_set<std::string> GetActorFactionEditorIDs(RE::Actor* actor, bool forceRefresh = false);
+    bool IsActorInLoveScene(RE::Actor* actor, bool forceRefresh = false);
     GameTime CurrentGameHour();
     GameDayPart CurrentGameDayPart();
     int GetRandomInt(int min, int max);

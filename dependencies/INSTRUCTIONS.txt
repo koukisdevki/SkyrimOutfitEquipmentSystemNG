@@ -8,3 +8,5 @@ Check ppj files to see which imports pyro will need.
 <Import>https://github.com/MrOctopus/nl_online/tree/main/skyui/source</Import>
 <Import>https://github.com/MrOctopus/nl_online/tree/main/skse64/source</Import>
 <Import>https://github.com/MrOctopus/nl_online/tree/main/sse/source</Import>
+
+https://www.nexusmods.com/skyrimspecialedition/articles/4231 (Flower Girls extract sources from BSA)

@@ -87,9 +87,6 @@ void AutoOutfitSwitchService::StateReset() {
     auto& cacheService = OutfitSystemCacheService::GetSingleton();
     auto actors = overrideService.listActors();
 
-    // If main character is not part of the check changes, add it since its essential for tracking
-
-
     // Initialize tracker for each actor
     for (auto* actor : actors) {
         ActorActionStatusTracker tracker;
@@ -105,7 +102,7 @@ void AutoOutfitSwitchService::StateReset() {
             tracker.lastSleepingStatus = REUtilities::IsActorSleeping(actor);
             tracker.lastSwimmingStatus = actor->AsActorState()->IsSwimming();
             tracker.lastOnMountStatus = actor->IsOnMount();
-            tracker.lastInLoveSceneStatus = actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
+            tracker.lastInLoveSceneStatus = REUtilities::IsActorInLoveScene(actor) || actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
         } else {
             tracker.lastGameDayPart = std::nullopt;
             tracker.lastWeather = nullptr;
@@ -167,7 +164,8 @@ void AutoOutfitSwitchService::CheckForChanges() {
 
         // initialized check
         if (!tracker.initialized) {
-            LOG(info, "The actor {} tracking is now initialized.", actor->GetDisplayFullName());
+            message = "The actor {} tracking is now initialized." + static_cast<std::string>(actor->GetDisplayFullName());
+            LOG(info, message);
             UpdateOutfits(message);
             tracker.initialized = true;
             return;
@@ -255,10 +253,12 @@ void AutoOutfitSwitchService::CheckForChanges() {
         }
 
         // Check love scene status
-        const bool currentlyInLoveScene = actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
+        const bool currentlyInLoveSceneDetection = REUtilities::IsActorInLoveScene(actor, true);
+        const bool currentlyInLoveScene = currentlyInLoveSceneDetection || actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false;
         if (currentlyInLoveScene != tracker.lastInLoveSceneStatus) {
             message = actorName + (currentlyInLoveScene ? " now in love scene" : " no longer in love scene");
             UpdateOutfits(message);
+            LOG(info, "Love scene in progress");
             tracker.lastInLoveSceneStatus = currentlyInLoveScene;
             return;
         }
@@ -267,9 +267,14 @@ void AutoOutfitSwitchService::CheckForChanges() {
     LOG(info, "No changes detected.");
 }
 
-void AutoOutfitSwitchService::UpdateOutfits(const std::string& reason) {
+void AutoOutfitSwitchService::UpdateOutfits(const std::string& reason, int delayMS) {
     // Use a separate flag to prevent duplicate updates while processing
     isUpdating = true;
+
+    if (delayMS > 0) {
+        LOG(info, "Delaying outfit updating for {} ms", delayMS);
+        std::this_thread::sleep_for(std::chrono::milliseconds(delayMS));
+    }
 
     // Show notification
     RE::DebugNotification(("Outfit System: " + reason).c_str());
