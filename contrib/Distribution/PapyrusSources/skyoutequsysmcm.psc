@@ -155,21 +155,26 @@ Function RefreshCache()
    _sSelectedOutfit = SkyrimOutfitEquipmentSystemNativeFuncs.GetSelectedOutfit(_aCurrentActor)
    ;
    _sOutfitNames = SkyrimOutfitEquipmentSystemNativeFuncs.NaturalSort_ASCII(_sOutfitNames)
+EndFunction
 
+Function ResetActorSelection()
+   _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ListActors()
 
+   If _kActorSelection_SelectCandidates.Length > 0 
+      If !SkyrimOutfitEquipmentSystemNativeFuncs.HasActor(_aCurrentActor)
+         _aCurrentActor = _kActorSelection_SelectCandidates[0]
+      EndIf 
+   Else 
+      _aCurrentActor = Game.GetPlayer()
+   Endif 
 EndFunction
 
 Function ResetOutfitBrowser()
    _iOutfitBrowserPage   = 0
    _iOutfitEditorBodySlotPage = 0
-   _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ListActors()
-
-   If _kActorSelection_SelectCandidates.Length > 0
-      _aCurrentActor = _kActorSelection_SelectCandidates[0]
-   Else 
-      _aCurrentActor = Game.GetPlayer()
-   Endif 
    
+   ResetActorSelection()
+
    _sEditingOutfit       = ""
    _sOutfitShowingContextMenu = ""
    _sOutfitNames = new String[1]
@@ -435,7 +440,15 @@ EndFunction
             return
          EndIf
          AddToggleOptionST("OPT_Enabled", "$Enabled", SkyrimOutfitEquipmentSystemNativeFuncs.IsEnabled())
-         AddMenuOptionST("OPT_SelectActorSelection", "$SkyOutEquSys_Text_SelectActorSelection", _aCurrentActor.GetBaseObject().GetName())
+         
+         _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ListActors()
+
+         If _kActorSelection_SelectCandidates.Length > 0
+            AddMenuOptionST("OPT_SelectActorSelection", "$SkyOutEquSys_Text_SelectActorSelection", _aCurrentActor.GetBaseObject().GetName())
+         Else 
+            AddMenuOptionST("OPT_SelectActorSelection", "$SkyOutEquSys_Text_SelectActorSelection", "$SkyOutEquSys_Text_DefaultActiveActorNameString")
+         Endif
+         
          AddEmptyOption()
          ;
          ; Active actor selection
@@ -501,6 +514,8 @@ EndFunction
             return
          Endif
          SkyrimOutfitEquipmentSystemNativeFuncs.AddActor(_kActorSelection_SelectCandidates[aiIndex - 1])
+         ResetActorSelection()
+         ForcePageReset()
       EndEvent
       Event OnDefaultST()
       EndEvent
@@ -528,6 +543,8 @@ EndFunction
          Endif
          SkyrimOutfitEquipmentSystemNativeFuncs.RemoveActor(_kActorSelection_SelectCandidates[aiIndex - 1])
          SkyrimOutfitEquipmentSystemNativeFuncs.RefreshArmorFor(_kActorSelection_SelectCandidates[aiIndex - 1])
+         ResetActorSelection()
+         ForcePageReset()
       EndEvent
       Event OnDefaultST()
       EndEvent
