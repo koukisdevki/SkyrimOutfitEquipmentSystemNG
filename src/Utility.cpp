@@ -179,7 +179,7 @@ std::unordered_set<std::string> REUtilities::GetActorFactionEditorIDs(RE::Actor*
 
 bool REUtilities::IsActorInFlowerGirlScene(RE::Actor* actor) {
     if (!actor) {
-        LOG(info, "Actor is None");
+        EXTRALOG(info, "Actor is None");
         return false;
     }
 
@@ -192,26 +192,26 @@ bool REUtilities::IsActorInFlowerGirlScene(RE::Actor* actor) {
     }
 
     if (!fgFactionForm) {
-        LOG(info, "No FG faction keywords found");
+        EXTRALOG(info, "No FG faction keywords found");
         return false;
     }
 
     RE::TESFaction* fgAnimationFaction = skyrim_cast<RE::TESFaction*>(fgFactionForm);
 
     if (!fgAnimationFaction) {
-        LOG(info, "Could not convert fgFaction form to faction");
+        EXTRALOG(info, "Could not convert fgFaction form to faction");
         return false;
     }
 
-    LOG(info, "Checking if actor is in FG faction");
+    EXTRALOG(info, "Checking if actor is in FG faction");
 
     bool result = actor->IsInFaction(fgAnimationFaction);
 
     if (result) {
-        LOG(info, "Actor {} is in FG faction", actor->GetName());
+        EXTRALOG(info, "Actor {} is in FG faction", actor->GetName());
     }
     else {
-        LOG(info, "Actor {} is not in FG faction", actor->GetName());
+        EXTRALOG(info, "Actor {} is not in FG faction", actor->GetName());
     }
 
     return result;
@@ -225,7 +225,7 @@ bool REUtilities::IsFlowerGirlsInLoadOrder() {
 
 bool REUtilities::IsActorSleeping(RE::Actor* actor) {
     if (!actor) {
-        LOG(info, "Actor is None");
+        EXTRALOG(trace, "Actor is None");
         return false;
     }
 

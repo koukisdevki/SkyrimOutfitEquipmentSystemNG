@@ -52,7 +52,7 @@ namespace OutfitSystem {
 
                         // If the armor to be equipped is not part of the list, then don't equip anything.
                         if (!currentOutfitArmors.empty() && !currentOutfitArmors.contains(armor) && !inExceptionState) {
-                            LOG(info, "Intercepted actor {}'s equip. Cannot equip {} because its not part of {}", actor->GetDisplayFullName(), armor->GetFormID(), outfitAssignment.currentOutfitName);
+                            EXTRALOG(info, "Intercepted actor {}'s equip. Cannot equip {} because its not part of {}", actor->GetDisplayFullName(), armor->GetFormID(), outfitAssignment.currentOutfitName);
                             return;
                         }
                     }

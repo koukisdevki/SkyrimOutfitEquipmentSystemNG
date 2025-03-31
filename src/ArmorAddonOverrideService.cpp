@@ -71,14 +71,13 @@ ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& 
         options.add_whitespace = true;
         auto status = google::protobuf::util::MessageToJsonString(data, &protoData, options);
 
-        // LOG(info, "Reading the following stored SKSE data:\n {}", protoData);
+        EXTRALOG(info, "Reading the following stored SKSE data:\n {}", protoData);
 
         // Extract data from the protobuf struct.
         enabled = data.enabled();
         playerInventoryManagementMode = static_cast<InventoryManagementMode>(data.player_inventory_management_mode());
         npcInventoryManagementMode = static_cast<InventoryManagementMode>(data.npc_inventory_management_mode());
         std::map<RE::Actor*, ActorOutfitAssignments> actorOutfitAssignmentsLocal;
-        auto pc = RE::PlayerCharacter::GetSingleton();
 
         for (const auto& actorAssn : data.actor_outfit_assignments()) {
             // Lookup the actor
@@ -100,13 +99,6 @@ ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& 
 
             actorOutfitAssignmentsLocal[actor] = assignments;
         }
-
-        // if the player character is not inside, add it
-        if (actorOutfitAssignmentsLocal.count(pc) == 0) {
-            LOG(info, "PC player does NOT exists inside the protocol");
-            actorOutfitAssignmentsLocal[pc] = ActorOutfitAssignments();
-        }
-        else LOG(info, "PC player already exists inside the protocol");
 
         actorOutfitAssignments = actorOutfitAssignmentsLocal;
         for (const auto& outfitData : data.outfits()) {

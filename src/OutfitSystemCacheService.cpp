@@ -16,7 +16,7 @@ OutfitSystemCacheService::OutfitSystemCacheService(const proto::OutfitSystemCach
 
         ActorVirtualInventoryStashes stashes;
 
-        LOG(info, "Reading the following stored outfit system cache data:\n {}", protoData);
+        EXTRALOG(info, "Reading the following stored outfit system cache data:\n {}", protoData);
 
         for (const auto& actorStash : data.actor_virtual_inventory_stashes()) {
             // Lookup the actor

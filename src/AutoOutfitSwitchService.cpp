@@ -126,22 +126,22 @@ void AutoOutfitSwitchService::StateReset() {
 
 void AutoOutfitSwitchService::CheckForChanges() {
     if (!isMonitoring) {  // Don't process if already updating
-        LOG(info, "Not Monitoring");
+        EXTRALOG(info, "Not Monitoring");
         return;
     }
 
     if (isUpdating) {
-        LOG(info, "Currently in the middle of updating...");
+        EXTRALOG(info, "Currently in the middle of updating...");
         return;
     }
 
     if (!ArmorAddonOverrideService::GetInstance().enabled) {
-        LOG(info, "SOES is currently disabled...");
+        EXTRALOG(info, "SOES is currently disabled...");
         return;
     }
 
 
-    LOG(info, "Checking changes across {}", actorStatusTrackers.size());
+    EXTRALOG(info, "Checking changes across {}", actorStatusTrackers.size());
 
     auto& cacheService = OutfitSystemCacheService::GetSingleton();
 
@@ -150,7 +150,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
         if (!actor) continue;
 
         if (!actor->Is3DLoaded()) {
-            LOG(info, "The actor {} is not 3D loaded.", actor->GetDisplayFullName());
+            EXTRALOG(info, "The actor {} is not 3D loaded.", actor->GetDisplayFullName());
             tracker.last3DLoadedStatus = false;
             continue;
         }
@@ -165,7 +165,7 @@ void AutoOutfitSwitchService::CheckForChanges() {
         // initialized check
         if (!tracker.initialized) {
             message = "The actor {} tracking is now initialized." + static_cast<std::string>(actor->GetDisplayFullName());
-            LOG(info, message);
+            EXTRALOG(info, message);
             UpdateOutfits(message);
             tracker.initialized = true;
             return;
@@ -257,13 +257,13 @@ void AutoOutfitSwitchService::CheckForChanges() {
         if (currentlyInLoveScene != tracker.lastInLoveSceneStatus) {
             message = actorName + (currentlyInLoveScene ? " now in love scene" : " no longer in love scene");
             UpdateOutfits(message);
-            LOG(info, "Love scene in progress");
+            EXTRALOG(info, "Love scene in progress");
             tracker.lastInLoveSceneStatus = currentlyInLoveScene;
             return;
         }
     }
 
-    LOG(info, "No changes detected.");
+    EXTRALOG(info, "No changes detected.");
 }
 
 void AutoOutfitSwitchService::UpdateOutfits(const std::string& reason, int delayMS) {
@@ -271,7 +271,7 @@ void AutoOutfitSwitchService::UpdateOutfits(const std::string& reason, int delay
     isUpdating = true;
 
     if (delayMS > 0) {
-        LOG(info, "Delaying outfit updating for {} ms", delayMS);
+        EXTRALOG(info, "Delaying outfit updating for {} ms", delayMS);
         std::this_thread::sleep_for(std::chrono::milliseconds(delayMS));
     }
 

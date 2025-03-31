@@ -143,7 +143,7 @@ void Callback_Serialization_Save(SKSE::SerializationInterface* intfc) {
             _assertWrite(intfc->WriteRecordData(data_ser.data(), static_cast<std::uint32_t>(data_ser.size())),
                          "Failed to write proto into SKSE record.");
 
-            LOG(info, "saved outfit system cache {} to save.", ProtoUtils::readMessageAsJSON(data));
+            if (Settings::ExtraLoggingEnabled()) EXTRALOG(info, "saved outfit system cache {} to save.", ProtoUtils::readMessageAsJSON(data));
         } catch (const OutfitSystemCacheService::save_error& exception) {
             LOG(info, "Save FAILED for OutfitSystemCacheService.");
             LOG(info, " - Exception string: %s", exception.what());
@@ -208,7 +208,8 @@ void Callback_Serialization_Load(SKSE::SerializationInterface* intfc) {
 
                         // Load data from protobuf struct.
                         service = OutfitSystemCacheService(data);
-                        LOG(info, "Succesfully loaded protobuf data for OutfitSystemCacheService. Data: {}.", ProtoUtils::readMessageAsJSON(data));
+                        LOG(info, "Succesfully loaded protobuf data for OutfitSystemCacheService.");
+                        if (Settings::ExtraLoggingEnabled()) EXTRALOG(info, " Data: {}.", ProtoUtils::readMessageAsJSON(data));
                     } else {
                         LOG(err, "Legacy format not supported. Try upgrading first.");
                     }

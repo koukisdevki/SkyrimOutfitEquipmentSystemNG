@@ -88,7 +88,7 @@ namespace OutfitSystem {
 
     void RefreshArmorForActor(RE::Actor* target) {
         if (!target || !target->Is3DLoaded()) {
-            LOG(info, "Actor {} not loaded", target->GetName());
+            EXTRALOG(info, "Actor {} not loaded", target->GetName());
             return;
         }
 
@@ -116,7 +116,7 @@ namespace OutfitSystem {
 
         // if no outfit, and the target is not the player, then equip default outfit
         if (outfit == g_noOutfit && target != RE::PlayerCharacter::GetSingleton() && !svc.listActors().contains(target)) {
-            LOG(critical,"Actor {} has no outfit and not part of the list, attempting to set default outfit.", target->GetName());
+            LOG(info,"Actor {} has no outfit and not part of the list, attempting to set default outfit.", target->GetName());
 
             // Get the default outfit for this NPC
             auto defaultOutfit = target->GetActorBase()->defaultOutfit;
@@ -174,7 +174,7 @@ namespace OutfitSystem {
                         cacheService.actorVirtualInventoryStashes[target] = std::unordered_set<RE::TESObjectARMO*>();
 
                     cacheService.actorVirtualInventoryStashes[target].insert(armor);
-                    LOG(info,"Added {} to {}'s inventory", armor->GetName(), target->GetName());
+                    EXTRALOG(info,"Added {} to {}'s inventory", armor->GetName(), target->GetName());
                 }
 
                 // Get the appropriate slot for this armor
@@ -182,7 +182,7 @@ namespace OutfitSystem {
 
                 // Use ActorEquipManager to equip
                 equipManager->EquipObject(target, armor, nullptr, 1, equipSlot, false, forceEquip, false, true);
-                LOG(info,"Equipped {} on {}", armor->GetName(), target->GetName());
+                EXTRALOG(info,"Equipped {} on {}", armor->GetName(), target->GetName());
             }
         }
 
@@ -220,7 +220,7 @@ namespace OutfitSystem {
 
             for (auto& actor : actors) {
                 RefreshArmorForActor(actor);
-                LOG(info,"Updated outfit for actor {}, ID: {}", actor->GetName(), actor->GetFormID());
+                EXTRALOG(info,"Updated outfit for actor {}, ID: {}", actor->GetName(), actor->GetFormID());
             }
         }
         catch (const std::exception& e) {
@@ -752,7 +752,7 @@ namespace OutfitSystem {
 
             auto dataHandler = RE::TESDataHandler::GetSingleton();
             if (!dataHandler) {
-                // LOG(warn, "DataHandler is null");
+                LOG(warn, "DataHandler is null");
                 g_isModListCached = true;
                 return;
             }
@@ -788,7 +788,7 @@ namespace OutfitSystem {
 
                     userMods[filename].outfitsMap[outfitName] = outfitForm;
 
-                    LOG(info, "Added outfit mod {} for {}", outfitName, filename);
+                    EXTRALOG(info, "Added outfit mod {} for {}", outfitName, filename);
                 }
             }
 
@@ -796,7 +796,7 @@ namespace OutfitSystem {
             for (const auto& mod : userMods) {
                 g_cachedModList.push_back(mod.second.filename);
                 g_cachedModMap[mod.second.filename] = mod.second;
-                LOG(info, "Done processing: {}, Load order {}, Total Outfits {}", mod.second.filename, mod.second.filePtr->GetCompileIndex(), mod.second.outfitsMap.size());
+                EXTRALOG(info, "Done processing: {}, Load order {}, Total Outfits {}", mod.second.filename, mod.second.filePtr->GetCompileIndex(), mod.second.outfitsMap.size());
             }
 
             std::sort(g_cachedModList.begin(), g_cachedModList.end(),
@@ -808,7 +808,7 @@ namespace OutfitSystem {
 
             g_isModListCached = true;
 
-            LOG(info, "Total mod count: {}", g_cachedModList.size());
+            LOG(info, "Total mod count with outfits: {}", g_cachedModList.size());
         }
     }
 
@@ -1097,7 +1097,7 @@ namespace OutfitSystem {
             // If result equal to or above 1, the outfit was successfully added
             if (result >= 1) {
                 addedCount++;
-                LOG(critical,"Successfully added outfit {} from mod {}", formEditorID, modName);
+                EXTRALOG(info,"Successfully added outfit {} from mod {}", formEditorID, modName);
             }
             else {
                 LOG(critical,"Failed to add outfit {} from mod {}", formEditorID, modName);
