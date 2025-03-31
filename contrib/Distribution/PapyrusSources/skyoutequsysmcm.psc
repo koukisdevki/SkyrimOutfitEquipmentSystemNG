@@ -1,5 +1,6 @@
 Scriptname SkyOutEquSysMCM extends SKI_ConfigBase Hidden
 
+String _PreviousMCMPage
 Int      _iOutfitBrowserPage   = 0
 Int      _iOutfitNameMaxBytes = 256 ; init option, should never change at run-time; can change if the DLL is revised appropriately
 Int _OutfitsPageMaxOutfits ; init option
@@ -112,17 +113,24 @@ Event OnPageReset(String asPage)
    If asPage == "$SkyOutEquSys_MCM_Options"
       ResetOutfitEditor()
       ShowOptions()
+      _PreviousMCMPage = "MCM_Options"
    ElseIf asPage == "$SkyOutEquSys_MCM_OutfitList"
-      If _sEditingOutfit
+      If _sEditingOutfit && _PreviousMCMPage == "MCM_Options"
+         _PreviousMCMPage = "MCM_OutfitList"
+         StopEditingOutfit()
+         return
+      ElseIf _sEditingOutfit
          ShowOutfitEditor()
       Else
          ResetOutfitEditor()
          ShowOutfitList()
       EndIf
+      _PreviousMCMPage = "MCM_OutfitList"
    EndIf
 EndEvent
 
 Function InitializeOptions()
+   _PreviousMCMPage = ""
    _OutfitsPageMaxOutfits = SkyrimOutfitEquipmentSystemNativeFuncs.GetIniOptionValueFor("OutfitPaginationCount") ; init option
    _iSelectMenuMax = SkyrimOutfitEquipmentSystemNativeFuncs.GetIniOptionValueFor("MenuPaginationCount") ; init option
    ; outfit page
@@ -793,7 +801,10 @@ EndFunction
       EndState
       State OutfitContext_New
          Event OnInputOpenST()
-            SetInputDialogStartText("outfit name or blank to cancel")
+            If SkyrimOutfitEquipmentSystemNativeFuncs.IsVRMode()
+               SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateNewOutfitName())
+            EndIf
+            SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
          EndEvent
          Event OnInputAcceptST(String asTextEntry)
             If !asTextEntry
@@ -814,7 +825,10 @@ EndFunction
       EndState
       State OutfitContext_NewFromWorn
          Event OnInputOpenST()
-            SetInputDialogStartText("outfit name or blank to cancel")
+            If SkyrimOutfitEquipmentSystemNativeFuncs.IsVRMode()
+               SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateNewOutfitName())
+            EndIf
+            SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
          EndEvent
          Event OnInputAcceptST(String asTextEntry)
             If !asTextEntry
@@ -1157,7 +1171,10 @@ EndFunction
       EndState
       State OutfitContext_Rename
          Event OnInputOpenST()
-            SetInputDialogStartText("outfit name or blank to cancel")
+            If SkyrimOutfitEquipmentSystemNativeFuncs.IsVRMode()
+               SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateOutfitNameForOutfit(_sOutfitShowingContextMenu))
+            EndIf
+            SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
          EndEvent
          Event OnInputAcceptST(String asTextEntry)
             If !asTextEntry

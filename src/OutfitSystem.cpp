@@ -1477,6 +1477,7 @@ namespace OutfitSystem {
             return false;
         }
     }
+
     bool ImportSettings(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
         LogExit exitPrint("ImportSettings"sv);
         std::string inputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitEquipmentSystemNGData.json";
@@ -1500,7 +1501,7 @@ namespace OutfitSystem {
         auto& service = ArmorAddonOverrideService::GetInstance();
         service = ArmorAddonOverrideService(data, SKSE::GetSerializationInterface());
         std::string message = "Read JSON config from " + inputFile;
-        REUtilities::DebugNotification(message.c_str());
+        REUtilities::DebugNotification(message);
         return true;
     }
 
@@ -1521,6 +1522,68 @@ namespace OutfitSystem {
             return Settings::AllowExternalEquipment();
         }
         return -1;
+    }
+
+    bool IsVRMode(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
+        return REL::Module::IsVR();
+    }
+
+    std::string GenerateNewOutfitName(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
+        auto& service = ArmorAddonOverrideService::GetInstance();
+
+        return "SOESOutfit" + to_string(service.outfits.size()+1);
+    }
+
+    std::string GenerateOutfitNameForOutfit(RE::BSScript::IVirtualMachine* registry,
+                                       std::uint32_t stackId,
+                                       RE::StaticFunctionTag*,
+                                       RE::BSFixedString name) {
+        // Get outfit armors
+        std::vector<RE::TESObjectARMO*> result;
+        auto& service = ArmorAddonOverrideService::GetInstance();
+        auto& outfit = service.getOutfit(name.data());
+
+        try {
+            auto& armors = outfit.m_armors;
+            for(auto it = armors.begin(); it != armors.end(); ++it)
+                result.push_back(*it);
+        } catch(std::out_of_range) {
+            registry->TraceStack("The specified outfit does not exist.", stackId, RE::BSScript::IVirtualMachine::Severity::kWarning);
+        }
+
+        // Empty outfit case
+        if(result.empty()) {
+            return "SOESOutfit" + std::to_string(service.outfits.size() + 1);
+        }
+
+        // Shuffle the armor list
+        std::random_device rd;
+        std::mt19937 g(rd());
+        ranges::shuffle(result, g);
+
+        // Collect up to 2 valid named armors
+        std::vector<std::string> armorNames;
+        for(const auto& armor : result) {
+            if(armor && armor->fullName.c_str() && armor->fullName.c_str()[0]) {
+                std::string nameOfOutfit = armor->fullName.c_str();
+                // Trim name if too long
+                if(nameOfOutfit.length() > 20) {
+                    nameOfOutfit = nameOfOutfit.substr(0, 20);
+                }
+                armorNames.push_back(nameOfOutfit);
+                if(armorNames.size() >= 2) break;
+            }
+        }
+
+        // Create outfit name based on collected armor names
+        if(!armorNames.empty()) {
+            if(armorNames.size() == 1) {
+                return armorNames[0] + "Outfit";
+            }
+            return armorNames[0] + "and" + armorNames[1] + "Set";
+        }
+
+        return "SOESOutfit" + std::to_string(service.outfits.size() + 1);
     }
 }// namespace OutfitSystem
 
@@ -1791,5 +1854,17 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "GetIniOptionValueFor",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetIniOptionValueFor);
+    registry->RegisterFunction(
+        "IsVRMode",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        IsVRMode);
+    registry->RegisterFunction(
+        "GenerateNewOutfitName",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        GenerateNewOutfitName);
+    registry->RegisterFunction(
+        "GenerateOutfitNameForOutfit",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        GenerateOutfitNameForOutfit);
     return true;
 }
