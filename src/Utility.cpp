@@ -65,11 +65,11 @@ std::string ProtoUtils::readMessageAsJSON(const google::protobuf::Message& data)
 Settings::Settings() : reader(GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\SkyrimOutfitEquipmentSystemNG.ini") {
     if (reader.ParseError() != 0) {
         // Failed to load INI. We proceed without it.
-        LOG(info, "Could not load INI file from {}. Continuing without it.", GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\SkyrimOutfitEquipmentSystemNG.ini");
+        FORCELOG(info, "Could not load INI file from {}. Continuing without it.", GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\SkyrimOutfitEquipmentSystemNG.ini");
         return;
-    } else {
-        LOG(info, "INI file was successfully loaded.");
     }
+
+    FORCELOG(info, "INI file was successfully loaded.");
 }
 
 Settings::~Settings() {}
@@ -79,6 +79,56 @@ static Settings* settings;
 INIReader* Settings::Instance() {
     if (!settings) settings = new Settings();
     return &settings->reader;
+}
+
+bool Settings::LoggingEnabled() {
+    static std::optional<bool> result;
+
+    if (!result.has_value()) {
+        result = Instance()->GetBoolean("Debug", "Logging", SettingsDefaults::Logging);
+    }
+
+    return result.has_value() ? result.value() : SettingsDefaults::Logging;
+}
+
+bool Settings::ExtraLoggingEnabled(){
+    static std::optional<bool> result;
+
+    if (!result.has_value()) {
+        result = LoggingEnabled() && Instance()->GetBoolean("Debug", "ExtraLogging", SettingsDefaults::ExtraLogging);
+    }
+
+    return result.has_value() ? result.value() : SettingsDefaults::ExtraLogging;
+}
+
+int32_t Settings::OutfitPaginationCount(){
+    static std::optional<int32_t> result;
+
+    if (!result.has_value()) {
+        result = Instance()->GetInteger("Menu", "OutfitPaginationCount", SettingsDefaults::OutfitPaginationCount);
+    }
+
+    return result.has_value() ? result.value() : SettingsDefaults::OutfitPaginationCount;
+}
+
+int32_t Settings::MenuPaginationCount() {
+    static std::optional<int32_t> result;
+
+    if (!result.has_value()) {
+        result = Instance()->GetInteger("Menu", "MenuPaginationCount", SettingsDefaults::MenuPaginationCount);
+    }
+
+    return result.has_value() ? result.value() : SettingsDefaults::MenuPaginationCount;
+}
+
+bool Settings::AllowExternalEquipment() {
+    static std::optional<bool> result;
+
+    if (!result.has_value()) {
+        result = LoggingEnabled() && Instance()->GetBoolean("Gameplay", "AllowExternalEquipment", SettingsDefaults::AllowExternalEquipment);
+    }
+
+    return result.has_value() ? result.value() : SettingsDefaults::AllowExternalEquipment;
 }
 
 std::unordered_set<RE::TESFaction*> REUtilities::GetActorFactions(RE::Actor* actor, bool forceRefresh) {

@@ -38,6 +38,7 @@ set(headers
         include/Hooking.h
         include/ArmorAddonOverrideService.h
         include/OutfitSystem.h
+        include/Utility.h
         include/Forms.h
         include/AutoOutfitSwitchService.h
         include/OutfitSystemCacheService.h

@@ -8,27 +8,30 @@ std::string GetRuntimeName();
 
 const std::string& GetRuntimeDirectory();
 
+namespace SettingsDefaults {
+    static constexpr bool Logging = false;
+    static constexpr bool ExtraLogging = false;
+    static constexpr int32_t OutfitPaginationCount = 20;
+    static constexpr int32_t MenuPaginationCount = 1000;
+    static constexpr bool AllowExternalEquipment = false;
+}
+
 class Settings {
 public:
     Settings();
     ~Settings();
     INIReader reader;
     static INIReader* Instance();
+
+    static bool LoggingEnabled();
+    static bool ExtraLoggingEnabled();
+    static int32_t OutfitPaginationCount();
+    static int32_t MenuPaginationCount();
+    static bool AllowExternalEquipment();
 };
 
 namespace ProtoUtils {
     std::string readMessageAsJSON(const google::protobuf::Message& data);
-};
-
-class LogExit {
-public:
-    std::string_view m_string;
-    LogExit(std::string_view name) : m_string(name) {
-        LOG(trace, "Enter {}", m_string);
-    };
-    ~LogExit() {
-        LOG(trace, "Exit {}", m_string);
-    };
 };
 
 namespace LoveSceneStringFormID {

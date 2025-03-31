@@ -48,7 +48,7 @@ namespace {
 
         // Load the actual log setting we should use.
         auto level = spdlog::level::info;
-        bool deepLogEnabled = Settings::Instance()->GetBoolean("Debug", "ExtraLogging", false);
+        bool deepLogEnabled = Settings::ExtraLoggingEnabled();
         if (deepLogEnabled) {
             LOG(info, "Extra logging enabled.");
             level = spdlog::level::trace;
@@ -90,7 +90,13 @@ void Game_Full_Load_Initialize_Callback() {
 void Callback_Messaging_SKSE(SKSE::MessagingInterface::Message* message) {
     if (message->type == SKSE::MessagingInterface::kPostLoad) {
         // Install hooks
-        Hooking::install_hook<OutfitSystem::EquipObject>();
+
+        if (!Settings::AllowExternalEquipment()) {
+            Hooking::install_hook<OutfitSystem::EquipObject>();
+        } else {
+            LOG(info, "Allowing external equipment.");
+        }
+
     } else if (message->type == SKSE::MessagingInterface::kPostPostLoad) {
     } else if (message->type == SKSE::MessagingInterface::kDataLoaded) {
     } else if (message->type == SKSE::MessagingInterface::kNewGame) {
