@@ -123,8 +123,8 @@ Event OnPageReset(String asPage)
 EndEvent
 
 Function InitializeOptions()
-   _OutfitsPageMaxOutfits = 20 ; init option
-   _iSelectMenuMax = 1000 ; init option
+   _OutfitsPageMaxOutfits = SkyrimOutfitEquipmentSystemNativeFuncs.GetIniOptionValueFor("OutfitPaginationCount") ; init option
+   _iSelectMenuMax = SkyrimOutfitEquipmentSystemNativeFuncs.GetIniOptionValueFor("MenuPaginationCount") ; init option
    ; outfit page
    _OutfitNamesPage = 1 ; init option
    _iOutfitNames_HeaderOptionCount = 0 ; init option

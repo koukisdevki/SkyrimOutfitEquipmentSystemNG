@@ -111,7 +111,7 @@ namespace OutfitSystem {
         std::unordered_set<RE::TESObjectARMO*> outfitArmorsInInventory;
 
         bool isPlayerCharacter = target == RE::PlayerCharacter::GetSingleton();
-        bool forceEquip = !isPlayerCharacter;  // true for NPCs, false for player
+        bool forceEquip = !isPlayerCharacter && !Settings::AllowExternalEquipment();  // If not the player, and no external equipment allowed, force equipment
         InventoryManagementMode actorManagementMode = isPlayerCharacter ? svc.playerInventoryManagementMode : svc.npcInventoryManagementMode;
 
         // if no outfit, and the target is not the player, then equip default outfit
@@ -1499,6 +1499,25 @@ namespace OutfitSystem {
         RE::DebugNotification(message.c_str(), nullptr, false);
         return true;
     }
+
+    uint32_t GetIniOptionValueFor(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*, std::string option) {
+        if (option == "Logging") {
+            return Settings::LoggingEnabled();
+        }
+        if (option == "ExtraLogging") {
+            return Settings::ExtraLoggingEnabled();
+        }
+        if (option == "OutfitPaginationCount") {
+            return Settings::OutfitPaginationCount();
+        }
+        if (option == "MenuPaginationCount") {
+            return Settings::MenuPaginationCount();
+        }
+        if (option == "AllowExternalEquipment") {
+            return Settings::AllowExternalEquipment();
+        }
+        return -1;
+    }
 }// namespace OutfitSystem
 
 bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
@@ -1764,5 +1783,9 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "UnsetLoveSceneForActors",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         UnsetLoveSceneForActors);
+    registry->RegisterFunction(
+        "GetIniOptionValueFor",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        GetIniOptionValueFor);
     return true;
 }

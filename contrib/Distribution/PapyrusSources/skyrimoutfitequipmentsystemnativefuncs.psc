@@ -115,4 +115,4 @@ Int      Function AddAllOutfitsFromModToOutfitList(String modName) Global Native
          Function SetLoveSceneForActors(Actor[] actors) Global Native
          Function UnsetLoveSceneForActors(Actor[] actors) Global Native
          
-         
+Int      Function GetIniOptionValueFor(string setting) Global Native

@@ -86,6 +86,7 @@ bool Settings::LoggingEnabled() {
 
     if (!result.has_value()) {
         result = Instance()->GetBoolean("Debug", "Logging", SettingsDefaults::Logging);
+        EXTRALOG(info, "Logging set as {}", result.value());
     }
 
     return result.has_value() ? result.value() : SettingsDefaults::Logging;
@@ -96,6 +97,7 @@ bool Settings::ExtraLoggingEnabled(){
 
     if (!result.has_value()) {
         result = LoggingEnabled() && Instance()->GetBoolean("Debug", "ExtraLogging", SettingsDefaults::ExtraLogging);
+        EXTRALOG(info, "ExtraLogging set as {}", result.value());
     }
 
     return result.has_value() ? result.value() : SettingsDefaults::ExtraLogging;
@@ -106,6 +108,7 @@ int32_t Settings::OutfitPaginationCount(){
 
     if (!result.has_value()) {
         result = Instance()->GetInteger("Menu", "OutfitPaginationCount", SettingsDefaults::OutfitPaginationCount);
+        EXTRALOG(info, "OutfitPaginationCount set as {}", result.value());
     }
 
     return result.has_value() ? result.value() : SettingsDefaults::OutfitPaginationCount;
@@ -116,6 +119,7 @@ int32_t Settings::MenuPaginationCount() {
 
     if (!result.has_value()) {
         result = Instance()->GetInteger("Menu", "MenuPaginationCount", SettingsDefaults::MenuPaginationCount);
+        EXTRALOG(info, "MenuPaginationCount set as {}", result.value());
     }
 
     return result.has_value() ? result.value() : SettingsDefaults::MenuPaginationCount;
@@ -126,6 +130,7 @@ bool Settings::AllowExternalEquipment() {
 
     if (!result.has_value()) {
         result = LoggingEnabled() && Instance()->GetBoolean("Gameplay", "AllowExternalEquipment", SettingsDefaults::AllowExternalEquipment);
+        EXTRALOG(info, "AllowExternalEquipment set as {}", result.value());
     }
 
     return result.has_value() ? result.value() : SettingsDefaults::AllowExternalEquipment;
