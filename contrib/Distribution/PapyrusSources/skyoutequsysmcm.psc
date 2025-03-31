@@ -29,6 +29,7 @@ Armor[]  _kOutfitEditor_AddFromListCandidates
 String   _sOutfitEditor_AddFromList_Filter   = ""
 Bool     _bOutfitEditor_AddFromList_Playable = True
 
+Bool _isVRMode ; init option
 Int _iSelectMenuMax ; init option
 
 ; outfit page
@@ -133,6 +134,7 @@ Function InitializeOptions()
    _PreviousMCMPage = ""
    _OutfitsPageMaxOutfits = SkyrimOutfitEquipmentSystemNativeFuncs.GetIniOptionValueFor("OutfitPaginationCount") ; init option
    _iSelectMenuMax = SkyrimOutfitEquipmentSystemNativeFuncs.GetIniOptionValueFor("MenuPaginationCount") ; init option
+   _isVRMode = SkyrimOutfitEquipmentSystemNativeFuncs.IsVRMode() ; init option
    ; outfit page
    _OutfitNamesPage = 1 ; init option
    _iOutfitNames_HeaderOptionCount = 0 ; init option
@@ -801,7 +803,7 @@ EndFunction
       EndState
       State OutfitContext_New
          Event OnInputOpenST()
-            If SkyrimOutfitEquipmentSystemNativeFuncs.IsVRMode()
+            If _isVRMode
                SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateNewOutfitName())
             EndIf
             SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
@@ -825,7 +827,7 @@ EndFunction
       EndState
       State OutfitContext_NewFromWorn
          Event OnInputOpenST()
-            If SkyrimOutfitEquipmentSystemNativeFuncs.IsVRMode()
+            If _isVRMode
                SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateNewOutfitName())
             EndIf
             SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
@@ -1171,7 +1173,7 @@ EndFunction
       EndState
       State OutfitContext_Rename
          Event OnInputOpenST()
-            If SkyrimOutfitEquipmentSystemNativeFuncs.IsVRMode()
+            If _isVRMode
                SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateOutfitNameForOutfit(_sOutfitShowingContextMenu))
             EndIf
             SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
@@ -1463,7 +1465,7 @@ EndFunction
       EndState
       State OutfitEditor_AddByID
          Event OnInputOpenST()
-            SetInputDialogStartText("0x00000000")
+            SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GetStringOptionValueFor("AddToOutfitByFormId"))
          EndEvent
          Event OnInputAcceptST(String asTextEntry)
             If !asTextEntry
@@ -1530,7 +1532,11 @@ EndFunction
          EndState
          State OutfitEditor_AddFromList_Filter
             Event OnInputOpenST()
-               SetInputDialogStartText(_sOutfitEditor_AddFromList_Filter)
+               If !_sOutfitEditor_AddFromList_Filter || _IsVRMode
+                  SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GetStringOptionValueFor("ArmorFilterName"))
+               Else 
+                  SetInputDialogStartText(_sOutfitEditor_AddFromList_Filter)
+               EndIf
             EndEvent
             Event OnInputAcceptST(String asTextEntry)
                If asTextEntry == _sOutfitEditor_AddFromList_Filter

@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package proto;
+
+message UserInputJSON{
+  string armor_filter_name = 1;
+  string add_to_outfit_by_form_id = 2;
+}

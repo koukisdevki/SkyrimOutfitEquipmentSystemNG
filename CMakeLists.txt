@@ -86,6 +86,7 @@ protobuf_generate_cpp(
     PROTO_SRC PROTO_HDR
     src/protos/outfit.proto
     src/protos/cache.proto
+    src/protos/input.proto
 )
 
 add_library(ProtocolBuffers STATIC ${PROTO_SRC} ${PROTO_HDR})

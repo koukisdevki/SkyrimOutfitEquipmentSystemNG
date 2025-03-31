@@ -1506,6 +1506,7 @@ namespace OutfitSystem {
     }
 
     uint32_t GetIniOptionValueFor(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*, std::string option) {
+        LogExit exitPrint("GetIniOptionValueFor"sv);
         if (option == "Logging") {
             return Settings::LoggingEnabled();
         }
@@ -1522,6 +1523,19 @@ namespace OutfitSystem {
             return Settings::AllowExternalEquipment();
         }
         return -1;
+    }
+
+    std::string GetStringOptionValueFor(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*, std::string option) {
+        LogExit exitPrint("GetStringOptionValueFor"sv);
+        if (option == "ArmorFilterName") {
+            return GetUserTextInputJSONOption(UserTextInputJSON::TextInputOption::ArmorFilterByName);
+        }
+
+        if (option == "AddToOutfitByFormId") {
+            return GetUserTextInputJSONOption(UserTextInputJSON::TextInputOption::AddToOutfitFormId);
+        }
+
+        return "";
     }
 
     bool IsVRMode(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
@@ -1854,6 +1868,10 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "GetIniOptionValueFor",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetIniOptionValueFor);
+    registry->RegisterFunction(
+        "GetStringOptionValueFor",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        GetStringOptionValueFor);
     registry->RegisterFunction(
         "IsVRMode",
         "SkyrimOutfitEquipmentSystemNativeFuncs",

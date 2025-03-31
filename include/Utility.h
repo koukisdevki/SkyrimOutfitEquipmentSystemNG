@@ -1,6 +1,7 @@
 #pragma once
 
 #include <google/protobuf/util/json_util.h>
+#include "input.pb.h"
 
 #include <string>
 
@@ -15,6 +16,15 @@ namespace SettingsDefaults {
     static constexpr int32_t MenuPaginationCount = 1000;
     static constexpr bool AllowExternalEquipment = false;
 }
+
+namespace UserTextInputJSON {
+    enum TextInputOption {
+        AddToOutfitFormId,
+        ArmorFilterByName
+    };
+
+    std::string GetUserTextInputJSONOption(TextInputOption option);
+};
 
 class Settings {
 public:

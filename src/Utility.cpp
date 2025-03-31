@@ -62,6 +62,50 @@ std::string ProtoUtils::readMessageAsJSON(const google::protobuf::Message& data)
     return dataAsJson;
 }
 
+std::optional<proto::UserInputJSON> GetUserTextInputJSONData() {
+    std::string inputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\SkyrimOutfitEquipmentSystemNGTextInput.json";
+    std::ifstream file(inputFile);
+    if (!file) {
+        LOG(critical, "Failed to open config for user text input json data");
+        return std::nullopt;
+    }
+    std::stringstream input;
+    input << file.rdbuf();
+    if (!file.good()) {
+        LOG(critical, "Failed to read user text input json data.");
+        return std::nullopt;
+    }
+
+    proto::UserInputJSON data;
+
+    auto status = google::protobuf::util::JsonStringToMessage(input.str(), &data);
+    if (!status.ok()) {
+        LOG(critical,"Failed to parse user text input json data. Invalid syntax.");
+        return std::nullopt;
+    }
+
+    FORCELOG(info, "Read the following data: ", ProtoUtils::readMessageAsJSON(data));
+
+    return data;
+}
+
+std::string UserTextInputJSON::GetUserTextInputJSONOption(TextInputOption option) {
+    std::optional<proto::UserInputJSON> dataRetrieveAttempt = GetUserTextInputJSONData();
+
+    if (!dataRetrieveAttempt.has_value()) {
+        LOG(critical, "Failed to retrieve JSON text input data");
+        return "";
+    }
+
+    proto::UserInputJSON data = dataRetrieveAttempt.value();
+
+    switch (option) {
+        case ArmorFilterByName: return data.armor_filter_name();
+        case AddToOutfitFormId: return data.add_to_outfit_by_form_id();
+        default: return "";
+    }
+}
+
 Settings::Settings() : reader(GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\SkyrimOutfitEquipmentSystemNG.ini") {
     if (reader.ParseError() != 0) {
         // Failed to load INI. We proceed without it.

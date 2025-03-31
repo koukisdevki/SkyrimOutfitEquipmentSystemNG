@@ -116,6 +116,7 @@ Int      Function AddAllOutfitsFromModToOutfitList(String modName) Global Native
          Function UnsetLoveSceneForActors(Actor[] actors) Global Native
          
 Int      Function GetIniOptionValueFor(string setting) Global Native
+String   Function GetStringOptionValueFor(string setting) Global Native
 Bool     Function IsVRMode() Global Native
 
 String   Function GenerateNewOutfitName() Global Native
