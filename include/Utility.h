@@ -61,6 +61,8 @@ struct GameTime {
 };
 
 namespace REUtilities {
+    void DebugNotification(const std::string&);
+    void ExtraDebugNotification(const std::string&);
     bool IsActorSleeping(RE::Actor* actor);
     std::unordered_set<RE::TESFaction*> GetActorFactions(RE::Actor* actor, bool forceRefresh = false);
     std::unordered_set<std::string> GetActorFactionEditorIDs(RE::Actor* actor, bool forceRefresh = false);

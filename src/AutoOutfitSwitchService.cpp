@@ -40,7 +40,7 @@ void AutoOutfitSwitchService::RestartMonitoring() {
     // Queue a task to restart monitoring after a brief delay
     // This happens asynchronously and won't block the main thread
     SKSE::GetTaskInterface()->AddTask([this]() {
-        RE::DebugNotification("Starting skyrim outfit equipment system thread....");
+        REUtilities::ExtraDebugNotification("Starting skyrim outfit equipment system thread....");
         this->EnableMonitoring(true);
         StateReset();
     });
@@ -54,15 +54,12 @@ void AutoOutfitSwitchService::MonitorThreadFunc() {
         // Sleep for a shorter interval
         std::this_thread::sleep_for(std::chrono::milliseconds(checkIntervalMS));
 
-        // Exit early if monitoring was disabled
-        if (!isMonitoring) break;
-
         // Accumulate time until we reach the update interval
         accumulatedTimeMS += checkIntervalMS;
         if (accumulatedTimeMS >= updateIntervalMS) {
             // Queue a task to check for changes on the main thread
             SKSE::GetTaskInterface()->AddTask([this]() {
-                RE::DebugNotification("Checking changes to location...");
+                REUtilities::ExtraDebugNotification("Checking changes to location...");
                 this->CheckForChanges();
             });
 
@@ -276,7 +273,7 @@ void AutoOutfitSwitchService::UpdateOutfits(const std::string& reason, int delay
     }
 
     // Show notification
-    RE::DebugNotification(("Outfit System: " + reason).c_str());
+    REUtilities::ExtraDebugNotification("Outfit System: " + reason);
 
     // Update outfits using your existing native functions
     auto player = RE::PlayerCharacter::GetSingleton();

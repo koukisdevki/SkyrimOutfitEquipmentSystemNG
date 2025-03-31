@@ -160,6 +160,7 @@ namespace OutfitSystem {
         }
 
         // Equip items that should be displayed
+        int32_t equipCount = 0;
         for (auto armor : displayItems) {
             // This armor should be equipped if not currently equipped
             if (!equippedArmors.contains(armor)) {
@@ -182,6 +183,7 @@ namespace OutfitSystem {
 
                 // Use ActorEquipManager to equip
                 equipManager->EquipObject(target, armor, nullptr, 1, equipSlot, false, forceEquip, false, true);
+                equipCount++;
                 EXTRALOG(info,"Equipped {} on {}", armor->GetName(), target->GetName());
             }
         }
@@ -198,8 +200,10 @@ namespace OutfitSystem {
             }
         }
 
-        LOG(info,"Updated outfit for actor {}, ID: {}", target->GetName(), target->GetFormID());
-        LOG(info,"Armors equipped: {}", displayItems.size());
+        if (equipCount > 0) {
+            LOG(info,"Updated outfit for actor {}, ID: {}", target->GetName(), target->GetFormID());
+            LOG(info,"Armors equipped: {}", displayItems.size());
+        }
     }
 
     void RefreshArmorFor(RE::BSScript::IVirtualMachine* registry,
@@ -1322,7 +1326,7 @@ namespace OutfitSystem {
                 char message[100];
                 LOG(info, "SOS: Location has Keyword %s", keyword->GetFormEditorID());
                 sprintf(message, "SOS: Location has keyword %s", keyword->GetFormEditorID());
-                RE::DebugNotification(message, nullptr, false);
+                REUtilities::DebugNotification(message);
                 */
                 keywords.emplace(keyword->GetFormEditorID());
             }
@@ -1360,7 +1364,7 @@ namespace OutfitSystem {
             const char* locationName = locationTypeStrings[static_cast<std::uint32_t>(location)];
             char message[100];
             sprintf_s(message, "SOS: This location is a %s.", locationName);
-            RE::DebugNotification(message, nullptr, false);
+            REUtilities::DebugNotification(message);
             */
             if (location.has_value()) {
                 service.setOutfitUsingLocation(location.value(), actor);
@@ -1461,15 +1465,15 @@ namespace OutfitSystem {
         if (file) {
             file << output;
         } else {
-            RE::DebugNotification("Failed to open config for writing", nullptr, false);
+            REUtilities::DebugNotification("Failed to open config for writing");
             return false;
         }
         if (file.good()) {
             std::string message = "Wrote JSON config to " + outputFile;
-            RE::DebugNotification(message.c_str(), nullptr, false);
+            REUtilities::DebugNotification(message);
             return true;
         } else {
-            RE::DebugNotification("Failed to write config", nullptr, false);
+            REUtilities::DebugNotification("Failed to write config");
             return false;
         }
     }
@@ -1478,25 +1482,25 @@ namespace OutfitSystem {
         std::string inputFile = GetRuntimeDirectory() + "Data\\SKSE\\Plugins\\OutfitEquipmentSystemNGData.json";
         std::ifstream file(inputFile);
         if (!file) {
-            RE::DebugNotification("Failed to open config for reading", nullptr, false);
+            REUtilities::DebugNotification("Failed to open config for reading");
             return false;
         }
         std::stringstream input;
         input << file.rdbuf();
         if (!file.good()) {
-            RE::DebugNotification("Failed to read config data", nullptr, false);
+            REUtilities::DebugNotification("Failed to read config data");
             return false;
         }
         proto::OutfitSystem data;
         auto status = google::protobuf::util::JsonStringToMessage(input.str(), &data);
         if (!status.ok()) {
-            RE::DebugNotification("Failed to parse config data. Invalid syntax.", nullptr, false);
+            REUtilities::DebugNotification("Failed to parse config data. Invalid syntax.");
             return false;
         }
         auto& service = ArmorAddonOverrideService::GetInstance();
         service = ArmorAddonOverrideService(data, SKSE::GetSerializationInterface());
         std::string message = "Read JSON config from " + inputFile;
-        RE::DebugNotification(message.c_str(), nullptr, false);
+        REUtilities::DebugNotification(message.c_str());
         return true;
     }
 

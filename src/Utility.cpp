@@ -136,6 +136,16 @@ bool Settings::AllowExternalEquipment() {
     return result.has_value() ? result.value() : SettingsDefaults::AllowExternalEquipment;
 }
 
+void REUtilities::DebugNotification(const std::string& notification) {
+    RE::DebugNotification(notification.c_str());
+}
+
+void REUtilities::ExtraDebugNotification(const std::string& notification) {
+    if (Settings::ExtraLoggingEnabled()) {
+        RE::DebugNotification(notification.c_str());
+    }
+}
+
 std::unordered_set<RE::TESFaction*> REUtilities::GetActorFactions(RE::Actor* actor, bool forceRefresh) {
     // Use actor's form ID as a unique key
     static std::unordered_map<RE::Actor*, std::unordered_set<RE::TESFaction*>> cachedFactions;
