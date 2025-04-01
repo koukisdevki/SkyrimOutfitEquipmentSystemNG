@@ -143,6 +143,8 @@ public:
         std::map<LocationType, cobb::istring> locationOutfits;
     };
     bool enabled = true;
+    bool quickSlotEnabled = false;
+    bool climatePriorityEnabled  = false;
     InventoryManagementMode playerInventoryManagementMode = InventoryManagementMode::Automatic;
     InventoryManagementMode npcInventoryManagementMode = InventoryManagementMode::Automatic;
     std::map<cobb::istring, Outfit> outfits;
@@ -178,6 +180,8 @@ public:
     bool shouldOverride(RE::Actor* target) const noexcept;
     void getOutfitNames(std::vector<std::string>& out, bool favoritesOnly = false) const;
     void setEnabled(bool) noexcept;
+    void setQuickslotEnabled(bool) noexcept;
+    void setClimatePriorityEnabled(bool) noexcept;
 
     InventoryManagementMode getPlayerInventoryManagementMode() const noexcept;
     void setPlayerInventoryManagementMode(InventoryManagementMode mode) noexcept;

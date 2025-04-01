@@ -20,4 +20,6 @@ message OutfitSystem {
   map<string, ActorOutfitAssignment> actor_outfit_assignments = 3; // <Actor RefFormID> key, matched to a ActorOutfitAssignment
   uint32 player_inventory_management_mode = 4;
   uint32 npc_inventory_management_mode = 5;
+  bool quickslots_enabled = 6;
+  bool climate_priority_enabled = 7;
 }

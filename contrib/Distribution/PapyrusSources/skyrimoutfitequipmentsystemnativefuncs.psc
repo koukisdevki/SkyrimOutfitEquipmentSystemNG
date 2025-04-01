@@ -124,3 +124,8 @@ Bool     Function IsVRMode() Global Native
 
 String   Function GenerateNewOutfitName() Global Native
 String   Function GenerateOutfitNameForOutfit(string outfit) Global Native
+
+bool     Function IsQuickslotEnabled () Global Native
+         Function SetQuickslotEnabled (Bool abEnabled) Global Native
+bool     Function IsClimatePriorityEnabled () Global Native
+         Function SetClimatePriorityEnabled (Bool abEnabled) Global Native

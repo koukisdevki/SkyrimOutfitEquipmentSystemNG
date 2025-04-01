@@ -687,6 +687,7 @@ namespace OutfitSystem {
         auto& service = ArmorAddonOverrideService::GetInstance();
         return service.currentOutfit(actor).m_name.c_str();
     }
+
     bool IsEnabled(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
         LogExit exitPrint("IsEnabled"sv);
         auto& service = ArmorAddonOverrideService::GetInstance();
@@ -1752,6 +1753,37 @@ namespace OutfitSystem {
 
         return "SOESOutfit" + std::to_string(service.outfits.size() + 1);
     }
+
+    void SetQuickslotEnabled(RE::BSScript::IVirtualMachine* registry,
+                    std::uint32_t stackId,
+                    RE::StaticFunctionTag*,
+                    bool state) {
+        LogExit exitPrint("SetQuickslotEnabled"sv);
+        auto& service = ArmorAddonOverrideService::GetInstance();
+        service.setQuickslotEnabled(state);
+    }
+
+    bool IsQuickslotEnabled(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
+        LogExit exitPrint("IsQuickslotEnabled"sv);
+        auto& service = ArmorAddonOverrideService::GetInstance();
+        return service.quickSlotEnabled;
+    }
+
+    void SetClimatePriorityEnabled(RE::BSScript::IVirtualMachine* registry,
+                    std::uint32_t stackId,
+                    RE::StaticFunctionTag*,
+                    bool state) {
+        LogExit exitPrint("SetClimatePriorityEnabled"sv);
+        auto& service = ArmorAddonOverrideService::GetInstance();
+        service.setClimatePriorityEnabled(state);
+    }
+
+    bool IsClimatePriorityEnabled(RE::BSScript::IVirtualMachine* registry, std::uint32_t stackId, RE::StaticFunctionTag*) {
+        LogExit exitPrint("IsClimatePriorityEnabled"sv);
+        auto& service = ArmorAddonOverrideService::GetInstance();
+        return service.climatePriorityEnabled;
+    }
+
 }// namespace OutfitSystem
 
 bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
@@ -2049,5 +2081,21 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "GenerateOutfitNameForOutfit",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         GenerateOutfitNameForOutfit);
+    registry->RegisterFunction(
+        "IsQuickslotEnabled",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        IsQuickslotEnabled);
+    registry->RegisterFunction(
+        "SetQuickslotEnabled",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        SetQuickslotEnabled);
+    registry->RegisterFunction(
+        "IsClimatePriorityEnabled",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        IsClimatePriorityEnabled);
+    registry->RegisterFunction(
+        "SetClimatePriorityEnabled",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        SetClimatePriorityEnabled);
     return true;
 }

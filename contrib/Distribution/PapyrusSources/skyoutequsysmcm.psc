@@ -437,7 +437,8 @@ EndFunction
    Event OnHighlightST()
       String sState = GetState()
       If StringUtil.Substring(sState, 0, 19) == "OPT_AutoswitchEntry"
-         SetInfoText("$SkyOutEquSys_Desc_Autoswitch")
+         Int iAutoswitchIndex = StringUtil.Substring(sState, 19) as Int
+         SetInfoText("$SkyOutEquSys_Desc_Autoswitch" + iAutoswitchIndex)
          Return
       EndIf
       If StringUtil.Substring(sState, 0, 16) == "OutfitList_Item_"
@@ -498,11 +499,13 @@ EndFunction
          AddMenuOptionST("OPT_NPCInventoryManagementMode", "$SkyOutEquSys_Text_NPCInventoryManagementMode", InventoryModeToTrString(_NPCInventoryManagementMode))
          AddEmptyOption()
          ;
-         ; Quickslots:
+         ; Additional Options
          ;
          SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
-         AddHeaderOption("$SkyOutEquSys_MCMHeader_Quickslots")
-         AddToggleOptionST("OPT_QuickslotsEnabled", "$SkyOutEquSys_Text_EnableQuickslots", kQM.GetEnabled())
+         AddHeaderOption("$SkyOutEquSys_MCMHeader_AdditionalOptions")
+         AddToggleOptionST("OPT_QuickslotsEnabled", "$SkyOutEquSys_OptionText_Quickslots", kQM.GetEnabled())
+         AddToggleOptionST("OPT_ClimatePriorityEnabled", "$SkyOutEquSys_OptionText_ClimatePriority", SkyrimOutfitEquipmentSystemNativeFuncs.IsClimatePriorityEnabled())
+
          AddEmptyOption()
          ;
          ; Setting import/export
@@ -617,10 +620,23 @@ EndFunction
       Event OnSelectST()
          SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
          kQM.SetEnabled(!kQM.GetEnabled())
-         SetToggleOptionValueST(kQM.GetEnabled())
+
+         Bool kQMEnabled = kQM.GetEnabled()
+         SkyrimOutfitEquipmentSystemNativeFuncs.SetQuickslotEnabled(kQMEnabled)
+         SetToggleOptionValueST(kQMEnabled)
       EndEvent
       Event OnHighlightST()
          SetInfoText("$SkyOutEquSys_Desc_EnableQuickslots")
+      EndEvent
+   EndState
+   State OPT_ClimatePriorityEnabled
+      Event OnSelectST()
+         Bool currClimatePriority = SkyrimOutfitEquipmentSystemNativeFuncs.IsClimatePriorityEnabled()
+         SkyrimOutfitEquipmentSystemNativeFuncs.SetClimatePriorityEnabled(!currClimatePriority)
+         SetToggleOptionValueST(SkyrimOutfitEquipmentSystemNativeFuncs.IsClimatePriorityEnabled())
+      EndEvent
+      Event OnHighlightST()
+         SetInfoText("$SkyOutEquSys_Desc_EnableClimatePriority")
       EndEvent
    EndState
    State OPT_PlayerInventoryManagementMode
@@ -678,6 +694,11 @@ EndFunction
    State OPT_ImportSettings
       Event OnSelectST()
          SkyrimOutfitEquipmentSystemNativeFuncs.ImportSettings()
+         ; Get and set quickslot setting
+         Bool quickSlotEnabled = SkyrimOutfitEquipmentSystemNativeFuncs.IsQuickslotEnabled()
+         SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
+         kQM.SetEnabled(quickSlotEnabled)
+
          FullRefresh()
       EndEvent
       Event OnHighlightST()
@@ -796,11 +817,7 @@ EndFunction
                iContextFlags = OPTION_FLAG_NONE
             EndIf
             AddHeaderOption("$SkyOutEquSys_MCMHeader_OutfitActions{" + _sOutfitShowingContextMenu + "}", iContextFlags)
-            If _sSelectedOutfit == _sOutfitShowingContextMenu
-               AddTextOptionST("OutfitContext_Toggle", "$SkyOutEquSys_OContext_ToggleOff", "", iContextFlags)
-            Else
-               AddTextOptionST("OutfitContext_Toggle", "$SkyOutEquSys_OContext_ToggleOn", "", iContextFlags)
-            EndIf
+
             ; TODO MINOR BUG: Emits warning when no outfit is selected, esp when there are no outfits in the list.
             If SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitFavoriteStatus(_sOutfitShowingContextMenu)
                AddTextOptionST("OutfitContext_Favorite", "$SkyOutEquSys_OContext_ToggleFavoriteOff", "", iContextFlags)
@@ -1432,17 +1449,6 @@ EndFunction
          EndEvent
      EndState
 
-      State OutfitContext_Toggle
-         Event OnSelectST()
-            If _sSelectedOutfit == _sOutfitShowingContextMenu
-               SkyrimOutfitEquipmentSystemNativeFuncs.SetSelectedOutfit(_aCurrentActor, "")
-            Else
-               SkyrimOutfitEquipmentSystemNativeFuncs.SetSelectedOutfit(_aCurrentActor, _sOutfitShowingContextMenu)
-            EndIf
-            RefreshCache()
-            ForcePageReset()
-         EndEvent
-      EndState
       State OutfitContext_Favorite
          Event OnSelectST()
             If SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitFavoriteStatus(_sOutfitShowingContextMenu)

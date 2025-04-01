@@ -75,6 +75,8 @@ ArmorAddonOverrideService::ArmorAddonOverrideService(const proto::OutfitSystem& 
 
         // Extract data from the protobuf struct.
         enabled = data.enabled();
+        quickSlotEnabled = data.quickslots_enabled();
+        climatePriorityEnabled = data.climate_priority_enabled();
         playerInventoryManagementMode = static_cast<InventoryManagementMode>(data.player_inventory_management_mode());
         npcInventoryManagementMode = static_cast<InventoryManagementMode>(data.npc_inventory_management_mode());
         std::map<RE::Actor*, ActorOutfitAssignments> actorOutfitAssignmentsLocal;
@@ -298,6 +300,14 @@ std::optional<cobb::istring> ArmorAddonOverrideService::getLocationOutfit(Locati
     if (actorOutfitAssignments.at(target).locationOutfits.count(LocationType::TYPE) && (CHECK_CODE)) \
         return std::optional<LocationType>(LocationType::TYPE);
 
+#define CHECK_WEATHER_LOCATIONS()                                                                         \
+    CHECK_LOCATION(CitySnow, keywords.contains("LocTypeCity") && weather_flags.snowy);                                    \
+    CHECK_LOCATION(CityRain, keywords.contains("LocTypeCity") && weather_flags.rainy);                                    \
+    CHECK_LOCATION(TownSnow, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && weather_flags.snowy); \
+    CHECK_LOCATION(TownRain, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && weather_flags.rainy); \
+    CHECK_LOCATION(WorldSnow, weather_flags.snowy);                                                                       \
+    CHECK_LOCATION(WorldRain, weather_flags.rainy);                                                                       \
+
 // Priority is as follows: Actions > Specific Locations > Generic Interiors > Weather Events > Generic Locations
 std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const std::unordered_set<std::string>& keywords,
                                                                          const WeatherFlags& weather_flags,
@@ -328,6 +338,10 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
         CHECK_LOCATION(Combat, target->IsInCombat());
     }
 
+    if (climatePriorityEnabled) {
+        CHECK_WEATHER_LOCATIONS()
+    }
+
     //Specific locations
     CHECK_LOCATION(PlayerHome, keywords.contains("LocTypePlayerHouse") && inInterior);
     CHECK_LOCATION(Castle, keywords.contains("LocTypeCastle"));
@@ -345,13 +359,10 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
     CHECK_LOCATION(TownInterior, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && inInterior);
     CHECK_LOCATION(WorldInterior, inInterior);
 
-    // Weather takes priority over regular weather events
-    CHECK_LOCATION(CitySnow, keywords.contains("LocTypeCity") && weather_flags.snowy);
-    CHECK_LOCATION(CityRain, keywords.contains("LocTypeCity") && weather_flags.rainy);
-    CHECK_LOCATION(TownSnow, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && weather_flags.snowy);
-    CHECK_LOCATION(TownRain, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity") && weather_flags.rainy);
-    CHECK_LOCATION(WorldSnow, weather_flags.snowy);
-    CHECK_LOCATION(WorldRain, weather_flags.rainy);
+    // Weather takes priority over regular generic locations
+    if (!climatePriorityEnabled) {
+        CHECK_WEATHER_LOCATIONS()
+    }
 
     // Generic Locations
     CHECK_LOCATION(CityNight, keywords.contains("LocTypeCity") && day_part == GameDayPart::Night);
@@ -385,9 +396,9 @@ void ArmorAddonOverrideService::getOutfitNames(std::vector<std::string>& out, bo
             out.push_back(it->second.m_name);
 }
 
-void ArmorAddonOverrideService::setEnabled(bool flag) noexcept {
-    enabled = flag;
-}
+void ArmorAddonOverrideService::setEnabled(const bool flag) noexcept { enabled = flag; }
+void ArmorAddonOverrideService::setQuickslotEnabled(const bool flag) noexcept { quickSlotEnabled = flag; }
+void ArmorAddonOverrideService::setClimatePriorityEnabled(const bool flag) noexcept { climatePriorityEnabled = flag; }
 
 InventoryManagementMode ArmorAddonOverrideService::getPlayerInventoryManagementMode() const noexcept {
     return playerInventoryManagementMode;
@@ -408,6 +419,8 @@ void ArmorAddonOverrideService::setNPCInventoryManagementMode(InventoryManagemen
 proto::OutfitSystem ArmorAddonOverrideService::save() {
     proto::OutfitSystem out;
     out.set_enabled(enabled);
+    out.set_quickslots_enabled(quickSlotEnabled);
+    out.set_climate_priority_enabled(climatePriorityEnabled);
     out.set_player_inventory_management_mode(static_cast<uint32_t>(playerInventoryManagementMode));
     out.set_npc_inventory_management_mode(static_cast<uint32_t>(npcInventoryManagementMode));
     for (const auto& actorAssn : actorOutfitAssignments) {
