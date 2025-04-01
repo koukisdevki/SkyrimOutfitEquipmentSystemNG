@@ -1,9 +1,13 @@
 Scriptname SkyOutEquSysOstim extends Quest  
 
-OsexIntegrationMain ostim 
+OsexIntegrationMain ostim
+
+bool _debugging = false
 
 Event OnInit()
 	ostim = OUtils.GetOStim()
+
+	_debugging = SkyrimOutfitEquipmentSystemNativeFuncs.GetIniOptionValueFor("ExtraLogging") > 0
 
 	RegisterForModEvent("ostim_thread_start", "OStimThreadStart")
 	RegisterForModEvent("ostim_thread_end", "OStimThreadEnd")
@@ -21,7 +25,9 @@ Event OStimThreadStart(string EventName, string StrArg, float ThreadID, Form Sen
 		SkyrimOutfitEquipmentSystemNativeFuncs.RefreshArmorForAllConfiguredActors()
 	Endif
 
-	Debug.Notification("Starting OStim thread, exec SkyOutEquSysOstim.")
+	If _debugging
+		Debug.Notification("Starting OStim thread, exec SkyOutEquSysOstim.")
+	EndIf
 EndEvent
 
 Event OStimThreadEnd(string EventName, string Json, float ThreadID, Form Sender)
@@ -33,6 +39,8 @@ Event OStimThreadEnd(string EventName, string Json, float ThreadID, Form Sender)
 		SkyrimOutfitEquipmentSystemNativeFuncs.SetOutfitsUsingLocation(Game.GetPlayer().GetCurrentLocation(), Weather.GetCurrentWeather())
 		SkyrimOutfitEquipmentSystemNativeFuncs.RefreshArmorForAllConfiguredActors()
 	Endif
-	
-	Debug.Notification("Ending OStim thread, stopping SkyOutEquSysOstim.")
+
+	If _debugging
+		Debug.Notification("Ending OStim thread, stopping SkyOutEquSysOstim.")
+	EndIf
 EndEvent

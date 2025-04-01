@@ -693,13 +693,18 @@ EndFunction
 
    State OPT_ImportSettings
       Event OnSelectST()
-         SkyrimOutfitEquipmentSystemNativeFuncs.ImportSettings()
-         ; Get and set quickslot setting
-         Bool quickSlotEnabled = SkyrimOutfitEquipmentSystemNativeFuncs.IsQuickslotEnabled()
-         SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
-         kQM.SetEnabled(quickSlotEnabled)
-
-         FullRefresh()
+         Bool confirm = ShowMessage("$SkyOutEquSys_Text_ImportConfirm", True, "$SkyOutEquSys_Confirm_OK", "$SkyOutEquSys_Confirm_Cancel")
+         If confirm 
+            SkyrimOutfitEquipmentSystemNativeFuncs.ImportSettings()
+            ; Get and set quickslot setting
+            Bool quickSlotEnabled = SkyrimOutfitEquipmentSystemNativeFuncs.IsQuickslotEnabled()
+            SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
+            kQM.SetEnabled(quickSlotEnabled)
+            FullRefresh()
+         Else
+            ShowMessage("$SkyOutEquSys_Text_ImportCanceled", false)
+            Return
+         EndIf
       EndEvent
       Event OnHighlightST()
          SetInfoText("$SkyOutEquSys_Desc_Import")
@@ -707,7 +712,14 @@ EndFunction
    EndState
    State OPT_ExportSettings
       Event OnSelectST()
-         SkyrimOutfitEquipmentSystemNativeFuncs.ExportSettings()
+         Bool confirm = ShowMessage("$SkyOutEquSys_Text_ExportConfirm", True, "$SkyOutEquSys_Confirm_OK", "$SkyOutEquSys_Confirm_Cancel")
+         If confirm 
+            SkyrimOutfitEquipmentSystemNativeFuncs.ExportSettings()
+            ShowMessage("$SkyOutEquSys_Text_ExportFinished", false)
+         Else
+            ShowMessage("$SkyOutEquSys_Text_ExportCanceled", false)
+            Return
+         EndIf
       EndEvent
       Event OnHighlightST()
          SetInfoText("$SkyOutEquSys_Desc_Export")
