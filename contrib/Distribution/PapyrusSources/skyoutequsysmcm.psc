@@ -49,6 +49,18 @@ Int _iOutfitForModImporter_PageStartIndex ; init option
 String[] _sOutfitImporter_AddOutfitsForModCandidates
 Int _iOutfitForModImporter_HeaderOptionCount ; init option
 
+Int _ArmorImportModPage ; init option
+Int _iArmorImporter_PageStartIndex ; init option
+String[] _sArmorImporter_ModList
+String _sArmorImporter_SelectedMod = "" ; init option
+Int _iArmorImporter_HeaderOptionCount ; init option
+
+Int _ArmorImportArmorsForModPage ; init option
+Int _iArmorForModImporter_PageStartIndex ; init option
+Armor[] _kArmorImporter_AddArmorsForModCandidates
+String[] _sArmorImporter_AddArmorsForModCandidates
+Int _iArmorForModImporter_HeaderOptionCount ; init option
+
 Int _PlayerInventoryManagementMode; init option
 Int _NPCInventoryManagementMode; init option
 
@@ -96,7 +108,8 @@ EndEvent
 Event OnConfigOpen()
    InitializeOptions()
    _iOutfitNameMaxBytes = SkyrimOutfitEquipmentSystemNativeFuncs.GetOutfitNameMaxLength()
-   _sOutfitImporter_ModList = SkyrimOutfitEquipmentSystemNativeFuncs.GetAllLoadedModsList()
+   _sOutfitImporter_ModList = SkyrimOutfitEquipmentSystemNativeFuncs.GetAllLoadedOutfitModsList()
+   _sArmorImporter_ModList = SkyrimOutfitEquipmentSystemNativeFuncs.GetAllLoadedArmorModsList()
    ResetOutfitBrowser()
    ResetOutfitEditor()
    RefreshCache()
@@ -139,6 +152,7 @@ Function InitializeOptions()
    _OutfitNamesPage = 1 ; init option
    _iOutfitNames_HeaderOptionCount = 0 ; init option
    _iOutfitNames_PageStartIndex = 0 ; init option
+
    ; optionally reset on config open
    _OutfitImportModPage   = 1 ; init option
    _iOutfitImporter_PageStartIndex = 0 ; init option
@@ -147,6 +161,15 @@ Function InitializeOptions()
    _OutfitImportOutfitsForModPage = 1 ; init option
    _iOutfitForModImporter_PageStartIndex = 0 ; init option
    _iOutfitForModImporter_HeaderOptionCount = 0 ; init option
+
+   ; inits for amor importer
+   _ArmorImportModPage = 1; init option
+   _iArmorImporter_PageStartIndex = 0; init option
+   _sArmorImporter_SelectedMod = "" ; init option
+   _iArmorImporter_HeaderOptionCount = 0 ; init option
+   _ArmorImportArmorsForModPage = 1 ; init option
+   _iArmorForModImporter_PageStartIndex = 0 ; init option
+   _iArmorForModImporter_HeaderOptionCount = 0 ; init option
 
    ; init options
    _PlayerInventoryManagementMode = SkyrimOutfitEquipmentSystemNativeFuncs.GetPlayerInventoryManagementMode(); init option
@@ -851,6 +874,271 @@ EndFunction
          EndEvent
       EndState
 
+      State ArmorContext_SelectImportMod
+         Event OnMenuOpenST()
+            ; Get the paginated mod list
+            Int totalMods = _sArmorImporter_ModList.Length
+            Int iTotalModPages = (totalMods + _iSelectMenuMax - 1) / _iSelectMenuMax
+            
+            ; Calculate start and end indices for the current page
+            Int startIndex = (_ArmorImportModPage - 1) * _iSelectMenuMax
+            
+            ; Calculate end index with a simple comparison to avoid going past the array bounds
+            Int maxEndIndex = totalMods - 1
+            Int calculatedEndIndex = startIndex + _iSelectMenuMax - 1
+            Int endIndex = calculatedEndIndex
+            
+            ; Ensure we don't exceed the array bounds
+            If endIndex > maxEndIndex
+                endIndex = maxEndIndex
+            EndIf
+            
+            ; Calculate how many items will be on this page
+            Int itemsOnPage = endIndex - startIndex + 1
+            
+            ; Add navigation buttons conditionally
+            Bool hasPrevPage = (_ArmorImportModPage > 1) && iTotalModPages > 1
+            Bool hasNextPage = (_ArmorImportModPage < iTotalModPages) && iTotalModPages > 1
+            
+            Int navOptionsCount = 0
+            If hasPrevPage
+                navOptionsCount += 1
+            EndIf
+            If hasNextPage
+                navOptionsCount += 1
+            EndIf
+            
+            ; Calculate total menu size: cancel button + nav options + mod entries
+            Int menuSize = 1 + navOptionsCount + itemsOnPage
+            
+            ; Create menu array with exact size
+            String[] sMenu = Utility.CreateStringArray(menuSize)
+            sMenu[0] = "$SkyOutEquSys_OEdit_AddCancel" ; First option is always cancel
+            
+            ; Current position in the menu array
+            Int menuIndex = 1
+            
+            ; Add navigation buttons
+            If hasPrevPage
+                sMenu[menuIndex] = "$SkyOutEquSys_MCMText_PrevPageOption"
+                menuIndex += 1
+            EndIf
+            
+            If hasNextPage
+                sMenu[menuIndex] = "$SkyOutEquSys_MCMText_NextPageOption"
+                menuIndex += 1
+            EndIf
+            
+            ; Store the number of navigation options (cancel + prev/next) for later reference
+            Int headerOptionsCount = 1 + navOptionsCount
+            
+            ; Add mod entries for the current page
+            Int i = 0
+            While i < itemsOnPage
+                sMenu[menuIndex] = _sArmorImporter_ModList[startIndex + i]
+                menuIndex += 1
+                i += 1
+            EndWhile
+            
+            ; Set the menu options
+            SetMenuDialogOptions(sMenu)
+            SetMenuDialogStartIndex(0)
+            SetMenuDialogDefaultIndex(0)
+            
+            ; Store the header count and page start index for the OnAccept handler
+            _iArmorImporter_HeaderOptionCount = headerOptionsCount
+            _iArmorImporter_PageStartIndex = startIndex
+        EndEvent
+         
+         Event OnMenuAcceptST(Int aiIndex)
+            Int iTotalModPages = (_sArmorImporter_ModList.Length + _iSelectMenuMax - 1) / _iSelectMenuMax
+
+            ; Get navigation state
+            Bool hasPrevPage = (_ArmorImportModPage > 1) && iTotalModPages > 1
+            Bool hasNextPage = (_ArmorImportModPage < iTotalModPages) && iTotalModPages > 1
+            
+            ; Handle user selection
+            If aiIndex == 0 ; Cancel option
+               Return
+            EndIf
+            
+            ; Handle navigation options
+            Int navOffset = 1 ; Start with 1 to account for the Cancel option
+            
+            ; Check if Previous Page was selected
+            If hasPrevPage && aiIndex == navOffset
+               _ArmorImportModPage -= 1
+               SetMenuDialogOptions(new String[1]) ; Force menu to reopen
+               ShowMessage("$SkyOutEquSys_MCMText_PrevPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
+               Return
+            EndIf
+            navOffset += hasPrevPage as Int ; Move offset if we have a prev button
+            
+            ; Check if Next Page was selected
+            If hasNextPage && aiIndex == navOffset
+               _ArmorImportModPage += 1
+               SetMenuDialogOptions(new String[1]) ; Force menu to reopen
+               ShowMessage("$SkyOutEquSys_MCMText_NextPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
+               Return
+            EndIf
+            
+            ; If we get here, a mod was selected - adjust index to account for the header options
+            Int modIndex = aiIndex - _iArmorImporter_HeaderOptionCount + _iArmorImporter_PageStartIndex
+            If modIndex >= 0 && modIndex < _sArmorImporter_ModList.Length
+               _sArmorImporter_SelectedMod = _sArmorImporter_ModList[modIndex]
+            EndIf
+            
+            ; Clear the candidates list when we're done
+            SetMenuOptionValueST(_sArmorImporter_SelectedMod)
+
+            ; Add the candidates
+            _kArmorImporter_AddArmorsForModCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.GetAllLoadedArmorsForMod(_sArmorImporter_SelectedMod)
+            _sArmorImporter_AddArmorsForModCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.GetAllLoadedArmorsForModAsStrings(_sArmorImporter_SelectedMod)
+         EndEvent
+         
+         Event OnHighlightST()                        
+            ; Add page info to the highlight text
+            Int iTotalModPages = (_sArmorImporter_ModList.Length + _iSelectMenuMax - 1) / _iSelectMenuMax
+            SetInfoText("$SkyOutEquSys_OContext_SelectImportModHighlight{" + _ArmorImportModPage + "}{" + iTotalModPages + "}{"+ _sArmorImporter_ModList.Length + "}")
+         EndEvent
+      EndState
+
+      State ArmorContext_ImportArmorFromMod
+         Event OnMenuOpenST()
+            ; Calculate total armors and pages for the selected mod
+            Int totalArmors = _kArmorImporter_AddArmorsForModCandidates.Length
+            Int _iTotalArmorForModPages = (totalArmors + _iSelectMenuMax - 1) / _iSelectMenuMax
+            
+            ; Calculate start and end indices for the current page
+            Int startIndex = (_ArmorImportArmorsForModPage - 1) * _iSelectMenuMax
+            
+            ; Calculate end index with a simple comparison
+            Int maxEndIndex = totalArmors - 1
+            Int calculatedEndIndex = startIndex + _iSelectMenuMax - 1
+            Int endIndex = calculatedEndIndex
+            
+            ; Ensure we don't exceed the array bounds
+            If endIndex > maxEndIndex
+                endIndex = maxEndIndex
+            EndIf
+            
+            ; Calculate how many items will be on this page
+            Int itemsOnPage = endIndex - startIndex + 1
+            
+            ; Add navigation buttons conditionally
+            Bool hasPrevPage = (_ArmorImportArmorsForModPage > 1) && _iTotalArmorForModPages > 1
+            Bool hasNextPage = (_ArmorImportArmorsForModPage < _iTotalArmorForModPages) && _iTotalArmorForModPages > 1
+            
+            ; Count navigation options
+            Int navOptionsCount = 0
+            
+            If hasPrevPage
+                navOptionsCount += 1
+            EndIf
+            If hasNextPage
+                navOptionsCount += 1
+            EndIf
+            
+            ; Calculate total menu size: cancel button + nav options + Armor entries for the page
+            Int menuSize = 1 + (navOptionsCount - 1) + itemsOnPage
+            
+            ; Create menu array with exact size
+            String[] sMenu = Utility.CreateStringArray(menuSize)
+            
+            ; Set cancel option
+            sMenu[0] = "$SkyOutEquSys_OEdit_AddCancel"
+            
+            ; Current position in the menu array
+            Int menuIndex = 1
+            
+            ; Add navigation buttons
+            If hasPrevPage
+                sMenu[menuIndex] = "$SkyOutEquSys_MCMText_PrevPageOption"
+                menuIndex += 1
+            EndIf
+            
+            If hasNextPage
+                sMenu[menuIndex] = "$SkyOutEquSys_MCMText_NextPageOption"
+                menuIndex += 1
+            EndIf
+            
+            ; Store the number of navigation options (cancel + prev/next) for later reference
+            Int headerOptionsCount = 1 + navOptionsCount
+            
+            ; Add Armor entries for the current page
+            Int i = 0
+            While i < itemsOnPage
+                sMenu[menuIndex] = _sArmorImporter_AddArmorsForModCandidates[startIndex + i]
+                menuIndex += 1
+                i += 1
+            EndWhile
+            
+            ; Set the menu options
+            SetMenuDialogOptions(sMenu)
+            SetMenuDialogStartIndex(0)
+            SetMenuDialogDefaultIndex(0)
+            
+            ; Store the header count and page start index for the OnAccept handler
+            _iArmorForModImporter_HeaderOptionCount = headerOptionsCount
+            _iArmorForModImporter_PageStartIndex = startIndex
+        EndEvent
+          
+         Event OnMenuAcceptST(Int aiIndex)
+             ; Get navigation state
+             Int _iTotalArmorForModPages = (_kArmorImporter_AddArmorsForModCandidates.Length + _iSelectMenuMax - 1) / _iSelectMenuMax
+             Bool hasPrevPage = (_ArmorImportArmorsForModPage > 1) && _iTotalArmorForModPages > 1
+             Bool hasNextPage = (_ArmorImportArmorsForModPage < _iTotalArmorForModPages) && _iTotalArmorForModPages > 1
+             
+             ; Handle user selection
+             If aiIndex == 0 ; Cancel option
+                 Return
+             EndIf
+             
+             ; Handle navigation options
+             Int navOffset = 1 ; Start with 1 to account for Cancel
+             
+             ; Check if Previous Page was selected
+             If hasPrevPage && aiIndex == navOffset
+                 _ArmorImportArmorsForModPage -= 1
+                 SetMenuDialogOptions(new String[1]) ; Force menu to reopen
+                 ShowMessage("$SkyOutEquSys_MCMText_PrevPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
+                 Return
+             EndIf
+             navOffset += hasPrevPage as Int ; Move offset if we have a prev button
+             
+             ; Check if Next Page was selected
+             If hasNextPage && aiIndex == navOffset
+                 _ArmorImportArmorsForModPage += 1
+                 SetMenuDialogOptions(new String[1]) ; Force menu to reopen
+                 ShowMessage("$SkyOutEquSys_MCMText_NextPageOptionMessage", False, "$SkyOutEquSys_MessageDismiss")
+                 Return
+             EndIf
+             
+             ; If we get here, an Armor was selected - adjust index to account for the header options
+             Int ArmorIndex = aiIndex - _iArmorForModImporter_HeaderOptionCount + _iArmorForModImporter_PageStartIndex
+             Int ArmorAddStatus = 0
+             Armor SelectedArmor
+     
+             If ArmorIndex >= 0 && ArmorIndex < _kArmorImporter_AddArmorsForModCandidates.Length
+                 ; Here handle the selected Armor
+                 SelectedArmor = _kArmorImporter_AddArmorsForModCandidates[ArmorIndex]
+                 SetMenuOptionValueST(_sArmorImporter_AddArmorsForModCandidates[ArmorIndex])
+                 AddArmorToOutfit(SelectedArmor)
+             EndIf
+         EndEvent
+          
+         Event OnHighlightST()                        
+             ; Add page info to the highlight text
+             Int _iTotalArmorForModPages = (_kArmorImporter_AddArmorsForModCandidates.Length + _iSelectMenuMax - 1) / _iSelectMenuMax
+
+             If _sArmorImporter_SelectedMod == ""
+                 SetInfoText("$SkyOutEquSys_OContext_ImportArmorsFromMod")
+             Else 
+                 SetInfoText("$SkyOutEquSys_OContext_ImportArmorsFromModHighlight{" + _sArmorImporter_SelectedMod + "}{"+ _ArmorImportArmorsForModPage + "}{" + _iTotalArmorForModPages + "}{"+ _kArmorImporter_AddArmorsForModCandidates.Length + "}")
+             EndIf
+         EndEvent
+     EndState
+
       State OutfitContext_SelectImportMod
          Event OnMenuOpenST()
             ; Get the paginated mod list
@@ -1233,6 +1521,13 @@ EndFunction
             AddMenuOptionST ("OutfitEditor_AddFromWorn",    "$SkyOutEquSys_OEdit_AddFromWorn", "")
             AddInputOptionST("OutfitEditor_AddByID",        "$SkyOutEquSys_OEdit_AddByID", "")
             ; AddEmptyOption()
+
+            ; Add armor from mod
+            AddHeaderOption("$SkyOutEquSys_OEdit_AddFromArmorModList_Header")
+            AddMenuOptionST("ArmorContext_SelectImportMod", "$SkyOutEquSys_OEdit_AddModFromArmorModList_Search", _sArmorImporter_SelectedMod)
+            AddMenuOptionST("ArmorContext_ImportArmorFromMod", "$SkyOutEquSys_OEdit_AddArmorFromArmorModList_Search", "")
+
+            ; Add Any Armor
             AddHeaderOption  ("$SkyOutEquSys_OEdit_AddFromList_Header")
             AddMenuOptionST  ("OutfitEditor_AddFromList_Menu",     "$SkyOutEquSys_OEdit_AddFromList_Search", "")
             AddInputOptionST ("OutfitEditor_AddFromList_Filter",   "$SkyOutEquSys_OEdit_AddFromList_Filter_Name", _sOutfitEditor_AddFromList_Filter)

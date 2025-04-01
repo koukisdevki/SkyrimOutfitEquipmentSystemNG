@@ -84,7 +84,7 @@ std::optional<proto::UserInputJSON> GetUserTextInputJSONData() {
         return std::nullopt;
     }
 
-    FORCELOG(info, "Read the following data: ", ProtoUtils::readMessageAsJSON(data));
+    EXTRALOG(info, "Read the following data: ", ProtoUtils::readMessageAsJSON(data));
 
     return data;
 }

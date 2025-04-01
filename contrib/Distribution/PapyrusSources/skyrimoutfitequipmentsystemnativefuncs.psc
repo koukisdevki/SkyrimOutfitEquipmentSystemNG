@@ -104,8 +104,11 @@ String   Function GetLocationOutfit (Actor actor, Int aiLocationType) Global Nat
 Bool     Function ExportSettings () Global Native
 Bool     Function ImportSettings () Global Native
 
-String[] Function GetAllLoadedModsList () Global Native
+String[] Function GetAllLoadedOutfitModsList () Global Native
 String[] Function GetAllLoadedOutfitsForMod (String modName) Global Native
+String[] Function GetAllLoadedArmorModsList () Global Native
+Armor[]  Function GetAllLoadedArmorsForMod (String modName) Global Native
+String[] Function GetAllLoadedArmorsForModAsStrings (String modName) Global Native
 
 Int      Function AddOutfitFromModToOutfitList(String modName, String formEditorID) Global Native
 Int      Function AddAllOutfitsFromModToOutfitList(String modName) Global Native

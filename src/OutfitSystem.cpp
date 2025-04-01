@@ -714,7 +714,89 @@ namespace OutfitSystem {
         return false;
     }
 
-    namespace {
+    namespace ArmorMods {
+        struct ModEntryInfo {
+            std::string filename;
+            uint32_t loadOrderIndex;
+            const RE::TESFile* filePtr; // Add file pointer
+            std::unordered_map<std::string, RE::TESObjectARMO*> armorsMap;
+        };
+
+        std::unordered_map<std::string, ModEntryInfo> g_cachedModMap;
+        std::vector<std::string> g_cachedModList;
+        bool g_isModListCached = false;
+
+        void CacheAllLoadedMods() {
+            g_cachedModList.clear();
+            g_cachedModMap.clear();
+
+            auto dataHandler = RE::TESDataHandler::GetSingleton();
+            if (!dataHandler) {
+                LOG(warn, "DataHandler is null");
+                g_isModListCached = true;
+                return;
+            }
+
+            std::unordered_set<std::string> uniqueMods;
+            std::unordered_map<std::string, ModEntryInfo> userMods;
+
+            auto armorForms = dataHandler->GetFormArray<RE::TESObjectARMO>();
+
+            for (auto armorForm : armorForms) {
+                const RE::TESFile* mod = armorForm->GetFile(0);
+
+                if (!mod)
+                    continue;
+
+                std::string filename = std::string(mod->GetFilename());
+
+                // Skip excluded and duplicate plugins
+                if (!IsExcludedPlugin(filename)) {
+                    std::string armorName = armorForm->GetFullName();
+                    if (armorName.empty()) {
+                        // Use form id
+                        armorName = REUtilities::get_editorID(armorForm);
+                        if (armorName.empty()) {
+                            // Generate default name using form ID
+                            armorName = fmt::format("Outfit_{:X}", armorForm->formID & 0xFFF);
+                        }
+                    }
+
+                    if (uniqueMods.insert(filename).second) {
+                        ModEntryInfo entry;
+                        entry.filename = filename;
+                        entry.loadOrderIndex = mod->GetCompileIndex();
+                        entry.filePtr = mod;
+                        userMods[filename] = entry;
+                    }
+
+                    userMods[filename].armorsMap[armorName] = armorForm;
+
+                    EXTRALOG(info, "Added outfit mod {} for {}", armorName, filename);
+                }
+            }
+
+            g_cachedModList.reserve(userMods.size());
+            for (const auto& mod : userMods) {
+                g_cachedModList.push_back(mod.second.filename);
+                g_cachedModMap[mod.second.filename] = mod.second;
+                EXTRALOG(info, "Done processing: {}, Load order {}, Total Armors {}", mod.second.filename, mod.second.filePtr->GetCompileIndex(), mod.second.armorsMap.size());
+            }
+
+            std::sort(g_cachedModList.begin(), g_cachedModList.end(),
+            [&userMods](const std::string& a, const std::string& b) {
+                const auto aModInfo = userMods[a];
+                const auto bModInfo = userMods[b];
+                return aModInfo.loadOrderIndex < bModInfo.loadOrderIndex;
+            });
+
+            g_isModListCached = true;
+
+            LOG(info, "Total mod count with outfits: {}", g_cachedModList.size());
+        }
+    }
+
+    namespace OutfitMods {
         struct ModEntryInfo {
             std::string filename;
             uint32_t loadOrderIndex;
@@ -725,30 +807,6 @@ namespace OutfitSystem {
         std::unordered_map<std::string, ModEntryInfo> g_cachedModMap;
         std::vector<std::string> g_cachedModList;
         bool g_isModListCached = false;
-
-        bool IsPrintableString(const char* str, size_t maxLen) {
-            // First check if str is null
-            if (!str) return false;
-
-            try {
-                size_t len = 0;
-                while (str[len] && len < maxLen) {  // Use indexing which is sometimes safer
-                    char c = str[len];
-                    // Check if character is in printable ASCII range or common control chars
-                    if ((c < 0x20 || c > 0x7E) && c != '\t' && c != '\n' && c != '\r') {
-                        return false;
-                    }
-                    len++;
-                }
-
-                // Either we hit null terminator or reached max length
-                return str[len] == '\0' || len < maxLen;
-            }
-            catch (...) {
-                // If we hit any exception, the string is not safely readable
-                return false;
-            }
-        }
 
         void CacheAllLoadedMods() {
             g_cachedModList.clear();
@@ -816,7 +874,7 @@ namespace OutfitSystem {
         }
     }
 
-    std::vector<std::string> GetAllLoadedModsList(
+    std::vector<std::string> GetAllLoadedOutfitModsList(
         RE::BSScript::IVirtualMachine* registry,
         std::uint32_t stackId,
         RE::StaticFunctionTag*
@@ -824,12 +882,12 @@ namespace OutfitSystem {
         std::vector<std::string> result;
 
         // Use cached mod list
-        if (!g_isModListCached) {
-            CacheAllLoadedMods();
+        if (!OutfitMods::g_isModListCached) {
+            OutfitMods::CacheAllLoadedMods();
         }
 
-        result.reserve(g_cachedModList.size());
-        for (const auto & modString : g_cachedModList) {
+        result.reserve(OutfitMods::g_cachedModList.size());
+        for (const auto & modString : OutfitMods::g_cachedModList) {
             result.push_back(modString);
         }
 
@@ -849,16 +907,16 @@ namespace OutfitSystem {
         std::vector<std::string> result;
 
         // Ensure mod list is cached
-        if (!g_isModListCached) {
-            CacheAllLoadedMods();
+        if (!OutfitMods::g_isModListCached) {
+            OutfitMods::CacheAllLoadedMods();
         }
 
-        if (!g_cachedModMap.contains(modName)) {
+        if (!OutfitMods::g_cachedModMap.contains(modName)) {
             return result;
         }
 
         // Get all outfits for this mod
-        auto& outfits = g_cachedModMap[modName].outfitsMap;
+        auto& outfits = OutfitMods::g_cachedModMap[modName].outfitsMap;
 
         result.reserve(outfits.size());
         for (const auto& outfitName : outfits | views::keys) {
@@ -872,14 +930,109 @@ namespace OutfitSystem {
         return result;
     }
 
+    std::vector<std::string> GetAllLoadedArmorModsList(
+        RE::BSScript::IVirtualMachine* registry,
+        std::uint32_t stackId,
+        RE::StaticFunctionTag*
+    ) {
+        LogExit exitPrint("GetAllLoadedArmorModsList"sv);
+        std::vector<std::string> result;
+
+        // Use cached mod list
+        if (!ArmorMods::g_isModListCached) {
+            ArmorMods::CacheAllLoadedMods();
+        }
+
+        result.reserve(ArmorMods::g_cachedModList.size());
+        for (const auto & modString : ArmorMods::g_cachedModList) {
+            result.push_back(modString);
+        }
+
+        ranges::sort(result);
+
+        return result;
+    }
+
+    std::unordered_map<std::string, RE::TESObjectARMO*> GetAllLoadedArmorsForModMap(
+        std::string modName
+    ) {
+        LOG(info, "Grabbing all armor records for {}", modName);
+
+        // Ensure mod list is cached
+        if (!ArmorMods::g_isModListCached) {
+            ArmorMods::CacheAllLoadedMods();
+        }
+
+        if (!ArmorMods::g_cachedModMap.contains(modName)) {
+            std::unordered_map<std::string, RE::TESObjectARMO*> result;
+            return result;
+        }
+
+        return ArmorMods::g_cachedModMap[modName].armorsMap;
+    }
+
+    // Paginated list of outfits for a specific mod
+    std::vector<std::string> GetAllLoadedArmorsForModAsStrings(
+        RE::BSScript::IVirtualMachine* registry,
+        std::uint32_t stackId,
+        RE::StaticFunctionTag*,
+        std::string modName
+    ) {
+        LogExit exitPrint("GetAllLoadedArmorsForModAsStrings"sv);
+        LOG(info, "Grabbing all armor records for {}", modName);
+        std::vector<std::string> result;
+
+        // Get all outfits for this mod
+        auto armorsMap = GetAllLoadedArmorsForModMap(modName);
+
+        result.reserve(armorsMap.size());
+        for (const auto& armorName : armorsMap | views::keys) {
+            result.push_back(armorName);
+        }
+
+        ranges::sort(result);
+
+        LOG(info, "Mapped {} armors for {} as strings. Returning {} mods.", result.size(), modName, result.size());
+
+        return result;
+    }
+
+    // Paginated list of outfits for a specific mod
+    std::vector<RE::TESObjectARMO*> GetAllLoadedArmorsForMod(
+        RE::BSScript::IVirtualMachine* registry,
+        std::uint32_t stackId,
+        RE::StaticFunctionTag*,
+        std::string modName
+    ) {
+            LogExit exitPrint("GetAllLoadedArmorsForMod"sv);
+            LOG(info, "Grabbing all armor records for {}", modName);
+
+            // Get all outfits for this mod
+            auto armorsMap = GetAllLoadedArmorsForModMap(modName);
+
+            // Get sorted armor names by calling the string version
+            auto sortedNames = GetAllLoadedArmorsForModAsStrings(registry, stackId, nullptr, modName);
+
+            // Now create the armor vector using the same order as the sorted names
+            std::vector<RE::TESObjectARMO*> result;
+            result.reserve(sortedNames.size());
+            for (const auto& name : sortedNames) {
+                result.push_back(armorsMap[name]);
+            }
+
+            LOG(info, "Mapped {} armors for {}. Returning {} mods.", result.size(), modName, result.size());
+
+            return result;
+        }
+
     // Add a function to refresh the cache if needed (e.g., after mod installation during runtime)
     void RefreshModCache(
         RE::BSScript::IVirtualMachine* registry,
         std::uint32_t stackId,
         RE::StaticFunctionTag*
     ) {
-        g_isModListCached = false;
-        CacheAllLoadedMods();
+        OutfitMods::g_isModListCached = false;
+        OutfitMods::CacheAllLoadedMods();
     }
 
     std::vector<RE::BSFixedString> ListOutfits(RE::BSScript::IVirtualMachine* registry,
@@ -1014,20 +1167,20 @@ namespace OutfitSystem {
                       std::string formEditorID
     ) {
         // Ensure mod list is cached
-        if (!g_isModListCached) {
-            CacheAllLoadedMods();
+        if (!OutfitMods::g_isModListCached) {
+            OutfitMods::CacheAllLoadedMods();
         }
 
-        auto modIt = g_cachedModMap.find(modName);
+        auto modIt = OutfitMods::g_cachedModMap.find(modName);
 
-        if (modIt == g_cachedModMap.end()) {
+        if (modIt == OutfitMods::g_cachedModMap.end()) {
             return 0;
         }
 
         if (modIt->second.outfitsMap.empty()) {
             // attempt to load up outfits
             auto outfits = GetAllLoadedOutfitsForMod(registry, stackId, nullptr, modName);
-            auto modItRetry = g_cachedModMap.find(modName);
+            auto modItRetry = OutfitMods::g_cachedModMap.find(modName);
 
             if (outfits.empty() || modItRetry->second.outfitsMap.empty()) {
                 LOG(critical, "Failed to load any outfits for {}", modName);
@@ -1062,13 +1215,13 @@ namespace OutfitSystem {
                           std::string modName)
     {
         // Ensure mod list is cached
-        if (!g_isModListCached) {
-            CacheAllLoadedMods();
+        if (!OutfitMods::g_isModListCached) {
+            OutfitMods::CacheAllLoadedMods();
         }
 
-        auto modIt = g_cachedModMap.find(modName);
+        auto modIt = OutfitMods::g_cachedModMap.find(modName);
 
-        if (modIt == g_cachedModMap.end()) {
+        if (modIt == OutfitMods::g_cachedModMap.end()) {
             LOG(critical, "Could not find mod {} in cached mod map", modName);
             return 0;
         }
@@ -1076,7 +1229,7 @@ namespace OutfitSystem {
         if (modIt->second.outfitsMap.empty()) {
             // attempt to load up outfits
             auto outfits = GetAllLoadedOutfitsForMod(registry, stackId, nullptr, modName);
-            auto modItRetry = g_cachedModMap.find(modName);
+            auto modItRetry = OutfitMods::g_cachedModMap.find(modName);
 
             if (outfits.empty() || modItRetry->second.outfitsMap.empty()) {
                 LOG(critical, "Failed to load any outfits for {}", modName);
@@ -1821,13 +1974,25 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         ImportSettings);
     registry->RegisterFunction(
-        "GetAllLoadedModsList",
+        "GetAllLoadedOutfitModsList",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
-        GetAllLoadedModsList);
+        GetAllLoadedOutfitModsList);
     registry->RegisterFunction(
         "GetAllLoadedOutfitsForMod",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         GetAllLoadedOutfitsForMod);
+    registry->RegisterFunction(
+        "GetAllLoadedArmorModsList",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        GetAllLoadedArmorModsList);
+    registry->RegisterFunction(
+        "GetAllLoadedArmorsForMod",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        GetAllLoadedArmorsForMod);
+    registry->RegisterFunction(
+        "GetAllLoadedArmorsForModAsStrings",
+        "SkyrimOutfitEquipmentSystemNativeFuncs",
+        GetAllLoadedArmorsForModAsStrings);
     registry->RegisterFunction(
         "AddOutfitFromModToOutfitList",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
