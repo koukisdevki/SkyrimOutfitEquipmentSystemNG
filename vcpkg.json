@@ -26,14 +26,15 @@
     "plugin": {
       "description": "Build the SKSE plugin.",
       "dependencies": [
-        "commonlibsse-ng",
         "span-lite",
         "spdlog",
         "inih",
         "protobuf",
         "boost-stl-interfaces",
         "rsm-binary-io",
-        "xbyak"
+        "xbyak",
+        "directxtk",
+        "rapidcsv"
       ]
     },
     "tests": {

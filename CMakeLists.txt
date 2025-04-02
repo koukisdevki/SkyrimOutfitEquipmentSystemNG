@@ -21,6 +21,12 @@ configure_file(
         @ONLY)
 
 ################################################################################
+# CommonLibNG include, and options
+################################################################################
+include("${CMAKE_CURRENT_SOURCE_DIR}/extern/CommonLibVR-ng/cmake/CommonLibSSE.cmake")
+set(BUILD_TESTS OFF CACHE BOOL "Build unit tests for CommonLibVR." FORCE)
+
+################################################################################
 # MSVC runtime library
 ################################################################################
 string(CONCAT MSVC_RUNTIME_LIBRARY_STR
@@ -68,7 +74,7 @@ source_group(
 ###############################################################################
 # Find Dependencies
 ###############################################################################
-find_package(CommonLibSSE CONFIG REQUIRED)
+add_subdirectory(extern/CommonLibVR-ng)
 find_package(span-lite REQUIRED CONFIG)
 find_package(spdlog REQUIRED CONFIG)
 find_package(xbyak REQUIRED CONFIG)
@@ -143,6 +149,7 @@ endif()
 
 # Link with dependencies
 target_link_libraries(${PROJECT_NAME} PUBLIC
+    CommonLibSSE::CommonLibSSE
     nonstd::span-lite
     spdlog::spdlog
     ${INIH_LIBRARY}

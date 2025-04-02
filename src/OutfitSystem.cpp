@@ -87,7 +87,12 @@ namespace OutfitSystem {
     }
 
     void RefreshArmorForActor(RE::Actor* target) {
-        if (!target || !target->Is3DLoaded()) {
+        if (!target) {
+            EXTRALOG(info, "Actor not loaded");
+            return;
+        }
+
+        if (!target->Is3DLoaded()) {
             EXTRALOG(info, "Actor {} not loaded", target->GetName());
             return;
         }
@@ -223,6 +228,7 @@ namespace OutfitSystem {
             auto actors = service.listActors();
 
             for (auto& actor : actors) {
+                if (!actor) continue;
                 RefreshArmorForActor(actor);
                 EXTRALOG(info,"Updated outfit for actor {}, ID: {}", actor->GetName(), actor->GetFormID());
             }

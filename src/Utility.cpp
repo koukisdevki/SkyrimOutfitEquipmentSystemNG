@@ -16,7 +16,7 @@ std::string GetRuntimePath() {
     if (appPath[0])
         return appPath;
 
-    if (!SKSE::WinAPI::GetModuleFileName(SKSE::WinAPI::GetModuleHandle((const char*) nullptr), appPath, sizeof(appPath))) {
+    if (!::GetModuleFileNameA(::GetModuleHandleA(nullptr), appPath, sizeof(appPath))) {
         SKSE::stl::report_and_fail("Failed to get runtime path");
     }
 

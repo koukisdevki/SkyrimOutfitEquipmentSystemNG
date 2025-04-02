@@ -232,6 +232,8 @@ void Callback_Serialization_Load(SKSE::SerializationInterface* intfc) {
 }
 
 SKSEPluginLoad(const LoadInterface* a_skse) {
+    SKSE::Init(a_skse);
+
     InitializeLog();
     LOG(info, "Load: {} v{}", Plugin::NAME, Plugin::VERSION.string());
 
@@ -241,12 +243,12 @@ SKSEPluginLoad(const LoadInterface* a_skse) {
     auto version = REL::Module::get().version();
     LOG(info, "Game version: {}", version.string());
 
+    LOG(info, "Is VR Mode enabled?? {}", REL::Module::IsVR());
+
 #ifdef _DEBUG
     // Intercept Visual C++ exceptions, but only if we're developing.
     _CrtSetReportHook(ReportHook);
 #endif
-
-    SKSE::Init(a_skse);
 
     LOG(info, "Loaded the outfit system SKSE.");
 

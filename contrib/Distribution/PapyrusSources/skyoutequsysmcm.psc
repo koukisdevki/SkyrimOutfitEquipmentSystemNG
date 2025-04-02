@@ -26,10 +26,11 @@ Armor[]  _kOutfitEditor_AddCandidates
 
 String[] _sOutfitEditor_AddFromListCandidates
 Armor[]  _kOutfitEditor_AddFromListCandidates
+String   _sOEdit_AddByID = ""
 String   _sOutfitEditor_AddFromList_Filter   = ""
 Bool     _bOutfitEditor_AddFromList_Playable = True
 
-Bool _isVRMode ; init option
+Bool _isVRMode = false ; init option
 Int _iSelectMenuMax ; init option
 
 ; outfit page
@@ -223,6 +224,7 @@ Function ResetOutfitEditor()
    ;
    _sOutfitEditor_AddFromListCandidates = new String[1]
    _kOutfitEditor_AddFromListCandidates = new Armor[1]
+   _sOEdit_AddByID = ""
    _sOutfitEditor_AddFromList_Filter   = ""
    _bOutfitEditor_AddFromList_Playable = True
 EndFunction
@@ -818,8 +820,13 @@ EndFunction
             EndIf
 
             AddHeaderOption("$SkyOutEquSys_MCMHeader_GeneralActions")
-            AddInputOptionST("OutfitContext_New", "$SkyOutEquSys_OContext_New", "")
-            AddInputOptionST("OutfitContext_NewFromWorn", "$SkyOutEquSys_OContext_NewFromWorn", "")
+            If _IsVRMode
+               AddTextOptionST("OutfitContext_New_Text", "$SkyOutEquSys_OContext_New", "$SkyOutEquSys_OContext_NewText")
+               AddTextOptionST("OutfitContext_NewFromWorn_Text", "$SkyOutEquSys_OContext_NewFromWorn", "$SkyOutEquSys_OContext_NewText")
+            Else 
+               AddInputOptionST("OutfitContext_New", "$SkyOutEquSys_OContext_New", "")
+               AddInputOptionST("OutfitContext_NewFromWorn", "$SkyOutEquSys_OContext_NewFromWorn", "")
+            EndIf
 
             AddMenuOptionST("OutfitContext_SelectImportMod", "$SkyOutEquSys_OContext_SelectImportMod", _sOutfitImporter_SelectedMod)
             AddMenuOptionST("OutfitContext_ImportOutfitFromMod", "$SkyOutEquSys_OContext_ImportOutfitsFromMod", "")
@@ -837,7 +844,13 @@ EndFunction
                AddTextOptionST("OutfitContext_Favorite", "$SkyOutEquSys_OContext_ToggleFavoriteOn", "", iContextFlags)
             EndIf
             AddTextOptionST ("OutfitContext_Edit",   "$SkyOutEquSys_OContext_Edit",   "", iContextFlags)
-            AddInputOptionST("OutfitContext_Rename", "$SkyOutEquSys_OContext_Rename", "", iContextFlags)
+
+            If _IsVRMode
+               AddTextOptionST("OutfitContext_Rename_Text", "$SkyOutEquSys_OContext_Rename", "", iContextFlags)
+            Else 
+               AddInputOptionST("OutfitContext_Rename", "$SkyOutEquSys_OContext_Rename", "", iContextFlags)
+            EndIf
+
             AddTextOptionST ("OutfitContext_Delete", "$SkyOutEquSys_OContext_Delete", "", iContextFlags)
          ;/EndBlock/;
       EndFunction
@@ -853,53 +866,68 @@ EndFunction
             ForcePageReset()
          EndEvent
       EndState
+
+      Function OutfitContext_NewF(String asTextEntry)
+         If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
+            ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
+            Return
+         EndIf
+         If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
+            ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
+            Return
+         EndIf
+         SkyrimOutfitEquipmentSystemNativeFuncs.CreateOutfit(asTextEntry)
+         RefreshCache()
+         StartEditingOutfit(asTextEntry)
+      EndFunction
+
+      Function OutfitContext_NewFromWornF(String asTextEntry)
+         If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
+            ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
+            Return
+         EndIf
+         If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
+            ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
+            Return
+         EndIf
+         Armor[] kList = SkyrimOutfitEquipmentSystemNativeFuncs.GetWornItems(Game.GetPlayer())
+         SkyrimOutfitEquipmentSystemNativeFuncs.OverwriteOutfit(asTextEntry, kList)
+         RefreshCache()
+         StartEditingOutfit(asTextEntry)
+      EndFunction
+      
+      State OutfitContext_New_Text
+         Event OnSelectST()
+            OutfitContext_NewF(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateNewOutfitName())
+         EndEvent
+      EndState
+      State OutfitContext_NewFromWorn_Text
+         Event OnSelectST()
+            OutfitContext_NewFromWornF(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateNewOutfitName())
+         EndEvent
+      EndState
+
       State OutfitContext_New
          Event OnInputOpenST()
-            If _isVRMode
-               SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateNewOutfitName())
-            EndIf
             SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
          EndEvent
          Event OnInputAcceptST(String asTextEntry)
             If !asTextEntry
                Return
             EndIf
-            If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
-               ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
-               Return
-            EndIf
-            If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
-               ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
-               Return
-            EndIf
-            SkyrimOutfitEquipmentSystemNativeFuncs.CreateOutfit(asTextEntry)
-            RefreshCache()
-            StartEditingOutfit(asTextEntry)
+
+            OutfitContext_NewF(asTextEntry)
          EndEvent
       EndState
       State OutfitContext_NewFromWorn
          Event OnInputOpenST()
-            If _isVRMode
-               SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateNewOutfitName())
-            EndIf
             SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
          EndEvent
          Event OnInputAcceptST(String asTextEntry)
             If !asTextEntry
                Return
             EndIf
-            If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
-               ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
-               Return
-            EndIf
-            If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
-               ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
-               Return
-            EndIf
-            Armor[] kList = SkyrimOutfitEquipmentSystemNativeFuncs.GetWornItems(Game.GetPlayer())
-            SkyrimOutfitEquipmentSystemNativeFuncs.OverwriteOutfit(asTextEntry, kList)
-            RefreshCache()
-            StartEditingOutfit(asTextEntry)
+            OutfitContext_NewFromWornF(asTextEntry)
          EndEvent
       EndState
 
@@ -1477,34 +1505,46 @@ EndFunction
             StartEditingOutfit(_sOutfitShowingContextMenu)
          EndEvent
       EndState
+
+      Function OutfitContext_RenameF(String asTextEntry)
+         If asTextEntry == _sOutfitShowingContextMenu
+            Return
+         EndIf
+         If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
+            ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
+            Return
+         EndIf
+         If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
+            ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
+            Return
+         EndIf
+         Bool bSuccess = SkyrimOutfitEquipmentSystemNativeFuncs.RenameOutfit(_sOutfitShowingContextMenu, asTextEntry)
+         If bSuccess
+            _sOutfitShowingContextMenu = asTextEntry
+            RefreshCache()
+            ForcePageReset()
+         EndIf
+      EndFunction
+
+      State OutfitContext_Rename_Text
+         Event OnSelectST()
+            String rename = SkyrimOutfitEquipmentSystemNativeFuncs.GenerateOutfitNameForOutfit(_sOutfitShowingContextMenu)
+            Bool confirm = ShowMessage("$SkyOutEquSys_OContext_RenameConfirm{"+rename+"}", True, "$SkyOutEquSys_Confirm_OK", "$SkyOutEquSys_Confirm_Cancel")
+            If confirm
+               OutfitContext_RenameF(rename)
+            EndIf 
+         EndEvent
+      EndState
+
       State OutfitContext_Rename
          Event OnInputOpenST()
-            If _isVRMode
-               SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GenerateOutfitNameForOutfit(_sOutfitShowingContextMenu))
-            EndIf
             SetInputDialogStartText("$SkyOutEquSys_OptionOutfitInputText")
          EndEvent
          Event OnInputAcceptST(String asTextEntry)
             If !asTextEntry
                Return
             EndIf
-            If asTextEntry == _sOutfitShowingContextMenu
-               Return
-            EndIf
-            If StringUtil.GetLength(asTextEntry) > _iOutfitNameMaxBytes
-               ShowMessage("$SkyOutEquSys_Err_OutfitNameTooLong", False, "$SkyOutEquSys_ErrDismiss")
-               Return
-            EndIf
-            If SkyrimOutfitEquipmentSystemNativeFuncs.OutfitExists(asTextEntry)
-               ShowMessage("$SkyOutEquSys_Err_OutfitNameTaken", False, "$SkyOutEquSys_ErrDismiss")
-               Return
-            EndIf
-            Bool bSuccess = SkyrimOutfitEquipmentSystemNativeFuncs.RenameOutfit(_sOutfitShowingContextMenu, asTextEntry)
-            If bSuccess
-               _sOutfitShowingContextMenu = asTextEntry
-               RefreshCache()
-               ForcePageReset()
-            EndIf
+            OutfitContext_RenameF(asTextEntry)
          EndEvent
          Event OnHighlightST()
             SetInfoText("$SkyOutEquSys_MCMInfoText_RenameOutfit{" + _sOutfitShowingContextMenu + "}")
@@ -1537,7 +1577,13 @@ EndFunction
             AddTextOptionST ("OutfitEditor_Back",           "$SkyOutEquSys_OEdit_Back", "")
             AddMenuOptionST ("OutfitEditor_AddFromCarried", "$SkyOutEquSys_OEdit_AddFromCarried", "")
             AddMenuOptionST ("OutfitEditor_AddFromWorn",    "$SkyOutEquSys_OEdit_AddFromWorn", "")
-            AddInputOptionST("OutfitEditor_AddByID",        "$SkyOutEquSys_OEdit_AddByID", "")
+
+            If _IsVRMode
+               AddTextOptionST("OutfitEditor_AddByID_Text","$SkyOutEquSys_OEdit_AddByID", _sOEdit_AddByID) 
+            Else 
+               AddInputOptionST("OutfitEditor_AddByID","$SkyOutEquSys_OEdit_AddByID", "")
+            EndIf
+
             ; AddEmptyOption()
 
             ; Add armor from mod
@@ -1548,7 +1594,14 @@ EndFunction
             ; Add Any Armor
             AddHeaderOption  ("$SkyOutEquSys_OEdit_AddFromList_Header")
             AddMenuOptionST  ("OutfitEditor_AddFromList_Menu",     "$SkyOutEquSys_OEdit_AddFromList_Search", "")
-            AddInputOptionST ("OutfitEditor_AddFromList_Filter",   "$SkyOutEquSys_OEdit_AddFromList_Filter_Name", _sOutfitEditor_AddFromList_Filter)
+
+            If _IsVRMode
+               AddTextOptionST("OutfitEditor_AddFromList_Filter_Text",   "$SkyOutEquSys_OEdit_AddFromList_Filter_Name", _sOutfitEditor_AddFromList_Filter)
+            Else 
+               AddInputOptionST("OutfitEditor_AddFromList_Filter",   "$SkyOutEquSys_OEdit_AddFromList_Filter_Name", _sOutfitEditor_AddFromList_Filter)
+            EndIf
+
+            
             AddToggleOptionST("OutfitEditor_AddFromList_Playable", "$SkyOutEquSys_OEdit_AddFromList_Filter_Playable", _bOutfitEditor_AddFromList_Playable)
 
             If !_sOutfitShowingSlotEditor
@@ -1776,6 +1829,46 @@ EndFunction
             SetInfoText("$SkyOutEquSys_MCMInfoText_AddToOutfitFromWorn")
          EndEvent
       EndState
+
+      Function OutfitEditor_AddByIDF(String asTextEntry)
+         Int iFormID = SkyrimOutfitEquipmentSystemNativeFuncs.HexToInt32(asTextEntry)
+         If !iFormID
+            ShowMessage("$SkyOutEquSys_Err_FormDoesNotExist", False, "$SkyOutEquSys_ErrDismiss")
+            Return
+         EndIf
+         Form  kForm  = Game.GetForm(iFormID)
+         Armor kArmor = Game.GetForm(iFormID) as Armor
+         If !kArmor
+            If !kForm
+               ShowMessage("$SkyOutEquSys_Err_FormDoesNotExist", False, "$SkyOutEquSys_ErrDismiss")
+               Return
+            EndIf
+            ShowMessage("$SkyOutEquSys_Err_FormIsNotArmor", False, "$SkyOutEquSys_ErrDismiss")
+            Return
+         EndIf
+         String sName = kArmor.GetName()
+         If !sName
+            sName = "$SkyOutEquSys_NamelessArmor"
+         EndIf
+         Bool bConfirm = ShowMessage("$SkyOutEquSys_Confirm_AddByID_Text{" + sName + "}", True, "$SkyOutEquSys_Confirm_AddByID_Yes", "$SkyOutEquSys_Confirm_AddByID_No")
+         If bConfirm
+            AddArmorToOutfit(kArmor)
+         EndIf
+      EndFunction 
+
+      State OutfitEditor_AddByID_Text 
+         Event OnSelectST()
+            String inputText = SkyrimOutfitEquipmentSystemNativeFuncs.GetStringOptionValueFor("AddToOutfitByFormId")
+            _sOEdit_AddByID = inputText
+            SetTextOptionValueST(inputText)
+
+            Bool confirm = ShowMessage("$SkyOutEquSys_OContext_AddByIdConfirm{"+inputText+"}", True, "$SkyOutEquSys_Confirm_OK", "$SkyOutEquSys_Confirm_Cancel")
+            If confirm
+               OutfitEditor_AddByIDF(inputText)
+            EndIf 
+         EndEvent
+      EndState
+
       State OutfitEditor_AddByID
          Event OnInputOpenST()
             SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GetStringOptionValueFor("AddToOutfitByFormId"))
@@ -1784,28 +1877,7 @@ EndFunction
             If !asTextEntry
                Return
             EndIf
-            Int iFormID = SkyrimOutfitEquipmentSystemNativeFuncs.HexToInt32(asTextEntry)
-            If !iFormID
-               Return
-            EndIf
-            Form  kForm  = Game.GetForm(iFormID)
-            Armor kArmor = Game.GetForm(iFormID) as Armor
-            If !kArmor
-               If !kForm
-                  ShowMessage("$SkyOutEquSys_Err_FormDoesNotExist", False, "$SkyOutEquSys_ErrDismiss")
-                  Return
-               EndIf
-               ShowMessage("$SkyOutEquSys_Err_FormIsNotArmor", False, "$SkyOutEquSys_ErrDismiss")
-               Return
-            EndIf
-            String sName = kArmor.GetName()
-            If !sName
-               sName = "$SkyOutEquSys_NamelessArmor"
-            EndIf
-            Bool bConfirm = ShowMessage("$SkyOutEquSys_Confirm_AddByID_Text{" + sName + "}", True, "$SkyOutEquSys_Confirm_AddByID_Yes", "$SkyOutEquSys_Confirm_AddByID_No")
-            If bConfirm
-               AddArmorToOutfit(kArmor)
-            EndIf
+            OutfitEditor_AddByIDF(asTextEntry)
          EndEvent
          Event OnHighlightST()
             SetInfoText("$SkyOutEquSys_MCMInfoText_AddToOutfitByID")
@@ -1843,10 +1915,18 @@ EndFunction
                EndIf
             EndEvent
          EndState
+         State OutfitEditor_AddFromList_Filter_Text
+            Event OnSelectST()
+               String inputText = SkyrimOutfitEquipmentSystemNativeFuncs.GetStringOptionValueFor("ArmorFilterName")
+               _sOutfitEditor_AddFromList_Filter = inputText
+               SetTextOptionValueST(inputText)
+            EndEvent
+         EndState
          State OutfitEditor_AddFromList_Filter
             Event OnInputOpenST()
-               If !_sOutfitEditor_AddFromList_Filter || _IsVRMode
-                  SetInputDialogStartText(SkyrimOutfitEquipmentSystemNativeFuncs.GetStringOptionValueFor("ArmorFilterName"))
+               If !_sOutfitEditor_AddFromList_Filter
+                  _sOutfitEditor_AddFromList_Filter = SkyrimOutfitEquipmentSystemNativeFuncs.GetStringOptionValueFor("ArmorFilterName")
+                  SetInputDialogStartText(_sOutfitEditor_AddFromList_Filter)
                Else 
                   SetInputDialogStartText(_sOutfitEditor_AddFromList_Filter)
                EndIf
