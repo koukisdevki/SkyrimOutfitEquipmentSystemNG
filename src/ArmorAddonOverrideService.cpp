@@ -258,18 +258,31 @@ std::unordered_set<RE::Actor*> ArmorAddonOverrideService::listActors() {
 }
 
 void ArmorAddonOverrideService::setOutfitUsingLocation(LocationType location, RE::Actor* target) {
-    if (actorOutfitAssignments.count(target) == 0) {
+    if (!target || !actorOutfitAssignments.contains(target)) {
         LOG(info, "No target found, cannot set outfit using location!");
         return;
     }
-    auto it = actorOutfitAssignments.at(target).locationOutfits.find(location);
-    if (it != actorOutfitAssignments.at(target).locationOutfits.end()) {
-        setOutfit(it->second.c_str(), target);
+
+    if (actorOutfitAssignments[target].locationOutfits.contains(location)) {
+        EXTRALOG(info, "Found outfit for location {} for actor {}", static_cast<uint32_t>(location),target->GetName());
+        setOutfit(actorOutfitAssignments[target].locationOutfits[location].c_str(), target);
+    }
+    else if ( // Set as default world case if location was not found in target outfit
+        actorOutfitAssignments[target].locationOutfits.contains(LocationType::World)
+    ){
+        if (target) {
+            LOG(info, "Location {} not found within {}'s outfit list, using default outfit", static_cast<uint32_t>(location),target->GetName());
+            setOutfit(actorOutfitAssignments[target].locationOutfits[LocationType::World].c_str(), target);
+        }
+    }
+    else { // Otherwise set outfit as empty
+        LOG(info, "Location {} and Base world location not found within {}'s outfit list, removing current set outfit", static_cast<uint32_t>(location), target->GetName());
+        setOutfit(g_noOutfitName, target);
     }
 }
 
 void ArmorAddonOverrideService::setLocationOutfit(LocationType location, const char* name, RE::Actor* target) {
-    if (actorOutfitAssignments.count(target) == 0) {
+    if (!actorOutfitAssignments.contains(target)) {
         LOG(info, "No target found, cannot set location outfit!");
         return;
     }
@@ -297,7 +310,7 @@ std::optional<cobb::istring> ArmorAddonOverrideService::getLocationOutfit(Locati
 }
 
 #define CHECK_LOCATION(TYPE, CHECK_CODE)                                                             \
-    if (actorOutfitAssignments.at(target).locationOutfits.count(LocationType::TYPE) && (CHECK_CODE)) \
+    if (actorOutfitAssignments.at(target).locationOutfits.contains(LocationType::TYPE) && (CHECK_CODE)) \
         return std::optional<LocationType>(LocationType::TYPE);
 
 #define CHECK_WEATHER_LOCATIONS()                                                                         \
@@ -314,7 +327,7 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
                                                                          const GameDayPart& day_part,
                                                                          RE::Actor* target) {
     // target must be loaded, and assigned
-    if (actorOutfitAssignments.count(target) == 0 || !target || !target->Is3DLoaded())
+    if (!actorOutfitAssignments.contains(target) || !target || !target->Is3DLoaded())
         return {};
 
     RE::TESObjectCELL* cell = target->GetParentCell();
@@ -373,9 +386,8 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
     CHECK_LOCATION(Town, keywords.contains("LocTypeTown") + keywords.contains("LocTypeCity"));
 
     CHECK_LOCATION(WorldNight, day_part == GameDayPart::Night);
-    CHECK_LOCATION(World, true);
-
-    return {};
+    // return world by default
+    return LocationType::World;
 }
 
 bool ArmorAddonOverrideService::shouldOverride(RE::Actor* target) const noexcept {
