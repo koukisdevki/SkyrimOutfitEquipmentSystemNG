@@ -339,17 +339,14 @@ std::optional<LocationType> ArmorAddonOverrideService::checkLocationType(const s
 
     auto& cacheService = OutfitSystemCacheService::GetSingleton();
 
-    if (target->Is3DLoaded()) {
-        // Action based location
-        std::optional<OutfitSystemCacheService::ActorStateCache> actorStateCacheOpt = cacheService.GetStateForActor(target);
+    std::optional<OutfitSystemCacheService::ActorStateCache> actorStateCacheOpt = cacheService.GetStateForActor(target);
 
-        CHECK_LOCATION(LoveScene, actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false);
-        CHECK_LOCATION(Mounting, target->IsOnMount());
-        CHECK_LOCATION(Swimming, target->AsActorState()->IsSwimming());
-        CHECK_LOCATION(Sleeping, REUtilities::IsActorSleeping(target));
-        CHECK_LOCATION(InWater, target->IsInWater());
-        CHECK_LOCATION(Combat, target->IsInCombat());
-    }
+    CHECK_LOCATION(LoveScene, actorStateCacheOpt.has_value() ? actorStateCacheOpt.value().loveScene : false);
+    CHECK_LOCATION(Mounting, target->IsOnMount());
+    CHECK_LOCATION(Swimming, target->AsActorState()->IsSwimming());
+    CHECK_LOCATION(Sleeping, REUtilities::IsActorSleeping(target));
+    CHECK_LOCATION(InWater, target->IsInWater());
+    CHECK_LOCATION(Combat, target->IsInCombat());
 
     if (climatePriorityEnabled) {
         CHECK_WEATHER_LOCATIONS()

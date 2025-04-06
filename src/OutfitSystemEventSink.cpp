@@ -97,15 +97,14 @@ RE::BSEventNotifyControl CheckLoveSceneEffects(RE::TESObjectREFR* target, std::o
         if (magicEvent.value() == fgHeadEffectForm->formID || magicEvent.value() == fgLowerEffectForm->formID) result = true;
 
         if (result) {
-            EXTRALOG(info, "Actor {} has FG effects, event type {}", actor->GetName(), effectType == Apply ? "Apply" : "Remove");
+            LOG(info, "Actor {} has FG effects, event type {}. Setting love state for actor.", actor->GetName(), effectType == Apply ? "Apply" : "Remove");
+            systemCache.SetLoveSceneStateForActor(actor, result);
         }
         else {
             EXTRALOG(info, "Actor {} determined not to have FG effects after event type {}", actor->GetName(), effectType == Apply ? "Apply" : "Remove");
         }
 
         EXTRALOG(info, "Compared (formID {} OR formID {}) vs formID {}", fgHeadEffectForm->formID, fgLowerEffectForm->formID, magicEvent.value());
-
-        systemCache.SetLoveSceneStateForActor(actor, result);
 
         return RE::BSEventNotifyControl::kContinue;
     }

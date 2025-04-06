@@ -1588,7 +1588,7 @@ namespace OutfitSystem {
         LogExit exitPrint("SetLoveSceneForActors"sv);
         auto& systemCache = OutfitSystemCacheService::GetSingleton();
 
-        for (auto& actor : actors) {
+        for (const auto& actor : actors) {
             systemCache.SetLoveSceneStateForActor(actor, true);
         }
     }
@@ -1602,7 +1602,7 @@ namespace OutfitSystem {
         LogExit exitPrint("SetLoveSceneForActors"sv);
         auto& systemCache = OutfitSystemCacheService::GetSingleton();
 
-        for (auto& actor : actors) {
+        for (const auto& actor : actors) {
             systemCache.SetLoveSceneStateForActor(actor, false);
         }
     }
