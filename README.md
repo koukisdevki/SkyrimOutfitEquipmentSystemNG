@@ -11,9 +11,10 @@ If you also understand the process for that commonlibSSE-ng SKSE sample plugin, 
 This plugin is built with VR support in mind, and uses alandtse's updated commonlibSSE-ng fork.
 
 If you plan on using this fork of commonlibSSE-ng (since `CharmedBaryon`'s seems to be abandoned), follow similar instructions for the sample plugin but instead of managing `CommonibSSE NG` from vcpkg packages, you add the fork as a submodule.
-
+```
 git submodule add -b ng https://github.com/alandtse/CommonLibVR.git extern/CommonLibVR-ng
 git submodule update --init --recursive
+```
 
 You then update the cmake file to reflect this by doing the following instead.
 
