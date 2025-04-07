@@ -537,6 +537,7 @@ contrib/Distribution/**/*.dll
 contrib/Distribution/**/*.pdb
 contrib/Distribution/**/*.pex
 contrib/Distribution.rar
+contrib/SkyrimOutfitEquipmentSystemNG.rar
 
 # Ignore dependencies, put them in.
 dependencies/**/scripts/source/*
