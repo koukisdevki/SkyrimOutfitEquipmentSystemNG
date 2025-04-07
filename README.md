@@ -62,6 +62,6 @@ See the following for extra information
 - CharmedBaryon https://github.com/CharmedBaryon/CommonLibSSE-NG (CommonLibSSE-NG)
 - alandtse CharmedBaryon https://github.com/alandtse/CommonLibVR/tree/ng (Latest CommonLibSSE-NG fork, with automatic VR ESL support)
 - MetricExpansion's https://www.nexusmods.com/skyrimspecialedition/mods/42162 (Updated Skyrim Outfit System), [source](https://gitlab.com/metricexpansion/SkyrimOutfitSystemSE)
-  - Note the version used as base was version v0.6 (See last 0.5+ commit [d57ba795186625bee879277f68d1a8f69a49bd93](https://gitlab.com/metricexpansion/SkyrimOutfitSystemSE/-/commit/d57ba795186625bee879277f68d1a8f69a49bd93)
+  - Note the version used as base was before version v0.6, which switched the code to rust (See last 0.5+ commit [d57ba795186625bee879277f68d1a8f69a49bd93](https://gitlab.com/metricexpansion/SkyrimOutfitSystemSE/-/commit/d57ba795186625bee879277f68d1a8f69a49bd93)
 - aers' [Skyrim SE port](https://github.com/aers/SkyrimOutfitSystemSE)  
 - DavidJCobb's original Skyrim LE mod (https://github.com/DavidJCobb/skyrim-outfit-system).
