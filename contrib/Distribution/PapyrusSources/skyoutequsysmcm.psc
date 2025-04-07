@@ -695,14 +695,21 @@ EndFunction
 
    State OPT_ImportSettings
       Event OnSelectST()
-         Bool confirm = ShowMessage("$SkyOutEquSys_Text_ImportConfirm", True, "$SkyOutEquSys_Confirm_OK", "$SkyOutEquSys_Confirm_Cancel")
-         If confirm 
+         Bool confirm = false 
+         If !_IsVRMode
+            ShowMessage("$SkyOutEquSys_Text_ImportConfirm", True, "$SkyOutEquSys_Confirm_OK", "$SkyOutEquSys_Confirm_Cancel")
+         Else 
+            confirm = true
+         EndIf
+
+         If confirm == true
             SkyrimOutfitEquipmentSystemNativeFuncs.ImportSettings()
             ; Get and set quickslot setting
             Bool quickSlotEnabled = SkyrimOutfitEquipmentSystemNativeFuncs.IsQuickslotEnabled()
             SkyOutEquSysQuickslotManager kQM = GetQuickslotManager()
             kQM.SetEnabled(quickSlotEnabled)
             FullRefresh()
+            Return
          Else
             ShowMessage("$SkyOutEquSys_Text_ImportCanceled", false)
             Return
@@ -718,6 +725,7 @@ EndFunction
          If confirm 
             SkyrimOutfitEquipmentSystemNativeFuncs.ExportSettings()
             ShowMessage("$SkyOutEquSys_Text_ExportFinished", false)
+            Return
          Else
             ShowMessage("$SkyOutEquSys_Text_ExportCanceled", false)
             Return

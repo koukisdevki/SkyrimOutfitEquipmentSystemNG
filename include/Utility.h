@@ -14,6 +14,7 @@ namespace SettingsDefaults {
     static constexpr bool ExtraLogging = false;
     static constexpr int32_t OutfitPaginationCount = 20;
     static constexpr int32_t MenuPaginationCount = 1000;
+    static constexpr int32_t PollingMS = 2000;
     static constexpr bool AllowExternalEquipment = false;
 }
 
@@ -37,6 +38,7 @@ public:
     static bool ExtraLoggingEnabled();
     static int32_t OutfitPaginationCount();
     static int32_t MenuPaginationCount();
+    static int32_t PollingMSInterval();
     static bool AllowExternalEquipment();
 };
 

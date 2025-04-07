@@ -49,6 +49,9 @@ void AutoOutfitSwitchService::RestartMonitoring() {
 void AutoOutfitSwitchService::MonitorThreadFunc() {
     int accumulatedTimeMS = 0;
 
+    // set updateIntervalMS from settings
+    updateIntervalMS = Settings::PollingMSInterval();
+
     while (isMonitoring) {
         constexpr int checkIntervalMS = 100;
         // Sleep for a shorter interval

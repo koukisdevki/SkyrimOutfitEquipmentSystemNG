@@ -168,6 +168,21 @@ int32_t Settings::MenuPaginationCount() {
 
     return result.has_value() ? result.value() : SettingsDefaults::MenuPaginationCount;
 }
+int32_t Settings::PollingMSInterval() {
+    static std::optional<int32_t> result;
+
+    if (!result.has_value()) {
+        result = Instance()->GetInteger("Gameplay", "PollingMS", SettingsDefaults::PollingMS);
+        EXTRALOG(info, "PollingMS set as {}", result.value());
+
+        if (result < 500) {
+            result = 500;
+            EXTRALOG(info, "PollingMS cannot be lower than 500ms, setting to 500ms", result.value());
+        }
+    }
+
+    return result.has_value() ? result.value() : SettingsDefaults::PollingMS;
+}
 
 bool Settings::AllowExternalEquipment() {
     static std::optional<bool> result;
