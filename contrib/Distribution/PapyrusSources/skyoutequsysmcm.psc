@@ -697,7 +697,7 @@ EndFunction
       Event OnSelectST()
          Bool confirm = false 
          If !_IsVRMode
-            ShowMessage("$SkyOutEquSys_Text_ImportConfirm", True, "$SkyOutEquSys_Confirm_OK", "$SkyOutEquSys_Confirm_Cancel")
+            confirm = ShowMessage("$SkyOutEquSys_Text_ImportConfirm", True, "$SkyOutEquSys_Confirm_OK", "$SkyOutEquSys_Confirm_Cancel")
          Else 
             confirm = true
          EndIf
