@@ -119,9 +119,9 @@ namespace OutfitSystem {
         bool forceEquip = !isPlayerCharacter && !Settings::AllowExternalEquipment();  // If not the player, and no external equipment allowed, force equipment
         InventoryManagementMode actorManagementMode = isPlayerCharacter ? svc.playerInventoryManagementMode : svc.npcInventoryManagementMode;
 
-        // if no outfit or not in target list, and the target is not the player, then equip default outfit
-        if ((outfit == g_noOutfit || !svc.listActors().contains(target)) && target != RE::PlayerCharacter::GetSingleton()) {
-            EXTRALOG(info,"Actor {} has no outfit. Attempting to set default outfit.", target->GetName());
+        // if no outfit, and the target is not the player, then equip default outfit
+        if (outfit == g_noOutfit && target != RE::PlayerCharacter::GetSingleton() && !svc.listActors().contains(target)) {
+            LOG(info,"Actor {} has no outfit and not part of the list, attempting to set default outfit.", target->GetName());
 
             // Get the default outfit for this NPC
             auto defaultOutfit = target->GetActorBase()->defaultOutfit;
