@@ -250,7 +250,9 @@ namespace OutfitSystem {
 
     std::vector<RE::Actor*> ActorsNearPC(RE::BSScript::IVirtualMachine* registry,
                                      std::uint32_t stackId,
-                                     RE::StaticFunctionTag*) {
+                                     RE::StaticFunctionTag*,
+                                     RE::TESObjectREFR* crossHairRef
+                                    ) {
         LogExit exitPrint("ActorsNearPC"sv);
         std::vector<RE::Actor*> result;
 
@@ -269,9 +271,36 @@ namespace OutfitSystem {
 
         auto isValidPlayableActor = [&](RE::Actor* actor) -> bool {
             return actor && actor != pc && !addedActors.contains(actor) &&
-                   actor->Is3DLoaded() && actor->GetRace() &&
-                   actor->GetRace()->data.flags.all(RE::RACE_DATA::Flag::kPlayable);
+                   actor->Is3DLoaded();
         };
+
+        // start with crosshair'd NPC
+        if (crossHairRef) {
+            auto crossHairActor = skyrim_cast<RE::Actor*>(crossHairRef);
+            if (crossHairActor) {
+                LOG(critical,"Attempting to add crosshair NPC {}", crossHairActor->GetName());
+                if (!svc.actorOutfitAssignments.contains(crossHairActor)) {
+                    if (isValidPlayableActor(crossHairActor)) {
+                        result.push_back(crossHairActor);
+                    }
+                    else {
+                        if (!(crossHairActor != pc && !addedActors.contains(crossHairActor))) {
+                            LOG(critical,"Crosshair actor is already in list");
+                        }
+                        else if (!crossHairActor->Is3DLoaded()) {
+                            LOG(critical,"Crosshair actor is not loaded");
+                        }
+                    }
+                }
+                else LOG(critical,"No valid cross hair actors when listing near NPCs");
+            }
+            else {
+                LOG(critical,"Cross hair not an actor");
+            }
+        }
+        else {
+            LOG(critical,"No crosshair actor");
+        }
 
         if (pcCell) {
             for (const auto& ref : pcCell->GetRuntimeData().references) {
@@ -803,7 +832,7 @@ namespace OutfitSystem {
 
             g_isModListCached = true;
 
-            LOG(info, "Total mod count with outfits: {}", g_cachedModList.size());
+            LOG(info, "Total mod count with armors: {}", g_cachedModList.size());
         }
     }
 
@@ -1822,7 +1851,7 @@ bool OutfitSystem::RegisterPapyrus(RE::BSScript::IVirtualMachine* registry) {
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         RefreshArmorForAllConfiguredActors);
     registry->RegisterFunction(
-        "ActorNearPC",
+        "ActorsNearPC",
         "SkyrimOutfitEquipmentSystemNativeFuncs",
         ActorsNearPC);
     //
