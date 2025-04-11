@@ -31,7 +31,7 @@ Armor[] Function GetWornItems    (Actor akSubject) Global Native
 ;
 ; Searching for actors. Used in menus.
 ;
-Actor[] Function ActorNearPC  () Global Native
+Actor[] Function ActorsNearPC  (ObjectReference crosshairActor) Global Native
 
 ;
 ; Search through all armor forms defined in the game (excluding templated ones). 

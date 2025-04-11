@@ -535,7 +535,7 @@ EndFunction
    EndState
    State OPT_AddActorSelection
       Event OnMenuOpenST()
-         _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ActorNearPC()
+         _kActorSelection_SelectCandidates = SkyrimOutfitEquipmentSystemNativeFuncs.ActorsNearPC(Game.GetCurrentCrosshairRef())
          String[] kActorNames = Utility.CreateStringArray(_kActorSelection_SelectCandidates.Length)
          Int iIterator = 0
          While iIterator < _kActorSelection_SelectCandidates.Length
